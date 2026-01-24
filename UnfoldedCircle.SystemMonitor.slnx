@@ -14,5 +14,7 @@
     <File Path=".github/workflows/qodana_code_quality.yml" />
     <File Path=".github/workflows/sonarqube.yml" />
   </Folder>
-  <Project Path="UnfoldedCircle.SystemMonitor/UnfoldedCircle.SystemMonitor.csproj" />
+  <Folder Name="/src/">
+    <Project Path="src/UnfoldedCircle.SystemMonitor/UnfoldedCircle.SystemMonitor.csproj" />
+  </Folder>
 </Solution>

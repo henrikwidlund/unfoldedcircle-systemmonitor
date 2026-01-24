@@ -38,7 +38,7 @@ Additionally, the application saves configured entities to the `configured_entit
 
 ## Logging
 
-By default, the application logs to stdout. 
+By default, the application logs to stdout.
 You can customize the log levels by either modifying the `appsettings.json` file or by setting environment variables.
 
 ### Log levels
@@ -48,19 +48,19 @@ You can customize the log levels by either modifying the `appsettings.json` file
 - `Warning`
 - `Error`
 
-`Trace` log level will log the contents of all the incoming and outgoing requests and responses. This includes both Websockets and Telnet. 
+`Trace` log level will log the contents of all the incoming and outgoing requests and responses. This includes both Websockets and Telnet.
 
 ### `appsettings.json`
 
 ```json
 {
-    "Logging": {
-        "LogLevel": {
-          "UnfoldedCircle.Server": "Information",
-          "UnfoldedCircle.SystemMonitor": "Information",
-          "Makaretu.Dns": "Warning"
-        }
+  "Logging": {
+    "LogLevel": {
+      "UnfoldedCircle.Server": "Information",
+      "UnfoldedCircle.SystemMonitor": "Information",
+      "Makaretu.Dns": "Warning"
     }
+  }
 }
 ```
 
@@ -80,7 +80,7 @@ Execute `publish.sh` script to build the application for the remote. This will p
 ### dotnet CLI
 
 ```sh
-dotnet publish ./UnfoldedCircle.SystemMonitor/UnfoldedCircle.SystemMonitor.csproj -c Release --self-contained -o ./publish
+dotnet publish ./src/UnfoldedCircle.SystemMonitor/UnfoldedCircle.SystemMonitor.csproj -c Release --self-contained -o ./publish
 ```
 
 This will produce a self-contained binary in the `publish` directory in the root of the repository.

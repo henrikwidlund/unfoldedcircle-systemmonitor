@@ -12,7 +12,7 @@ dotnet clean -c Release -p:BuildForLinuxArm=true
 
 # Run dotnet publish
 echo "Publish"
-dotnet publish ./UnfoldedCircle.SystemMonitor/UnfoldedCircle.SystemMonitor.csproj -c Release -p:BuildForLinuxArm=true -o ./publish
+dotnet publish ./src/UnfoldedCircle.SystemMonitor/UnfoldedCircle.SystemMonitor.csproj -c Release -p:BuildForLinuxArm=true -o ./publish
 
 # Enter the publish directory
 cd ./publish || exit
