@@ -1,0 +1,24 @@
+{
+  "driver_id": "monitor-unfolded-circle",
+  "version": "0.0.1",
+  "min_core_api": "0.20.0",
+  "name": {
+    "en": "Remote System Monitor"
+  },
+  "icon": "uc:remote",
+  "description": {
+    "en": "Integration for monitoring the remote's resource utilization and via sensors."
+  },
+  "developer": {
+    "name": "Henrik Widlund",
+    "email": "07online_rodeo@icloud.com",
+    "url": "https://github.com/henrikwidlund/unfoldedcircle-systemmonitor"
+  },
+  "setup_data_schema": {
+    "title": {
+      "en": "Setup Process"
+    },
+    "settings": []
+  },
+  "release_date": "2026-01-24"
+}

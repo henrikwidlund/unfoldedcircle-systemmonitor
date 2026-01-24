@@ -1,0 +1,69 @@
+name: GitHub Release
+
+on:
+  release:
+    types: [ published ]
+  workflow_dispatch:
+
+jobs:
+  release:
+    name: Release native binaries
+    permissions:
+      contents: write
+    strategy:
+      matrix:
+        kind: [ 'linux-arm64' ]
+        include:
+          - kind: linux-arm64
+            os: ubuntu-24.04-arm
+            target: linux-arm64
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Setup dotnet
+        uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Build
+        shell: bash
+        run: |
+          tag=$(git describe --tags --abbrev=0)
+          date=$(date -u +"%Y-%m-%d")
+          ASSEMBLY_VERSION="${tag//v}"
+          jq --arg version "$ASSEMBLY_VERSION" --arg date "$date" \
+            '.version = $version | .release_date = $date' \
+            src/UnfoldedCircle.SystemMonitor/driver.json > tmp.json && mv tmp.json src/UnfoldedCircle.SystemMonitor/driver.json
+          
+          # Build everything
+          release_name="unfolded-circle-system-monitor-$tag-${{ matrix.kind }}"
+          
+          dotnet publish ./src/UnfoldedCircle.SystemMonitor/UnfoldedCircle.SystemMonitor.csproj -r ${{ matrix.target }} -c Release -o ./publish -p:Version="$ASSEMBLY_VERSION" -p:PublishAot=true
+          if [ "${{ matrix.target }}" == "linux-arm64" ]; then
+            mkdir driverdir && mkdir driverdir/bin && mkdir driverdir/config && mkdir driverdir/data
+            cp publish/driver.json driverdir/driver.json
+            cp publish/appsettings*.json driverdir/bin/
+          
+            cp publish/driver driverdir/bin/
+            cp publish/driver.dbg driverdir/bin/
+          
+            tar -czvf unfolded-circle-system-monitor-$tag-remote.tar.gz -C ./driverdir .
+          
+            # Delete output directory
+            rm -r "./driverdir"
+          fi
+          
+          # Delete output directory
+          rm -r "./publish"
+
+      - name: Publish
+        uses: softprops/action-gh-release@a06a81a03ee405af7f2048a818ed3f03bbf83c7b
+        with:
+          files: |
+            unfolded-circle-system-monitor*.tar.gz
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
