@@ -80,7 +80,7 @@ Execute `publish.sh` script to build the application for the remote. This will p
 ### dotnet CLI
 
 ```sh
-dotnet publish ./src/UnfoldedCircle.SystemMonitor/UnfoldedCircle.SystemMonitor.csproj -c Release --self-contained -o ./publish
+dotnet publish ./UnfoldedCircle.SystemMonitor/UnfoldedCircle.SystemMonitor.csproj -c Release --self-contained -o ./publish
 ```
 
 This will produce a self-contained binary in the `publish` directory in the root of the repository.
