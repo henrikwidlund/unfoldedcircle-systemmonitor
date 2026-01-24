@@ -360,15 +360,15 @@ internal sealed class SystemMonitorWebSocketHandler(
         return GetAvailableEntities(await GetEntitiesAsync(wsId, payload.MsgData.Filter?.EntityType, cancellationToken), payload).ToArray();
     }
 
-    protected override ValueTask OnSubscribeEventsAsync(System.Net.WebSockets.WebSocket socket, SubscribeEventsMsg subscribeEventsMsg, string wsId, CancellationTokenWrapper cancellationTokenWrapper, CancellationToken commandCancellationToken)
+    protected override ValueTask OnSubscribeEventsAsync(System.Net.WebSockets.WebSocket socket, SubscribeEventsMsg payload, string wsId, CancellationTokenWrapper cancellationTokenWrapper, CancellationToken commandCancellationToken)
     {
-        if (subscribeEventsMsg.MsgData?.EntityIds is not { Length: > 0 })
+        if (payload.MsgData?.EntityIds is not { Length: > 0 })
             return ValueTask.CompletedTask;
 
         foreach (var sensorType in SensorType.GetValues())
         {
             var identifier = EntityId.GetIdentifier(EntityType.Sensor, sensorType.ToStringFast());
-            if (subscribeEventsMsg.MsgData.EntityIds.Contains(identifier))
+            if (payload.MsgData.EntityIds.Contains(identifier))
             {
                 TryAddEntityIdToBroadcastingEvents(identifier, cancellationTokenWrapper);
                 _ = Task.Factory.StartNew(() => HandleEventUpdatesAsync(socket, wsId, cancellationTokenWrapper),

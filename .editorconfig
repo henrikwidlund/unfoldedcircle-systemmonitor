@@ -353,6 +353,7 @@ dotnet_naming_style.camelcase.capitalization = camel_case
 dotnet_diagnostic.MA0004.severity = none
 dotnet_diagnostic.MA0016.severity = none
 dotnet_diagnostic.MA0025.severity = none
+dotnet_diagnostic.MA0038.severity = none
 dotnet_diagnostic.MA0048.severity = none
 dotnet_diagnostic.MA0051.severity = none
 dotnet_diagnostic.MA0007.severity = none
