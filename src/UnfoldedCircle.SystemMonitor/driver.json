@@ -16,9 +16,23 @@
   },
   "setup_data_schema": {
     "title": {
-      "en": "Setup Process"
+      "en": "Remote System Monitor Setup"
     },
-    "settings": []
+    "settings": [
+      {
+        "id": "disclaimer_1",
+        "field": {
+          "label": {
+            "value": {
+              "en": "Please make sure you have the remote's PIN code available for setup."
+            }
+          }
+        },
+        "label": {
+          "en": ""
+        }
+      }
+    ]
   },
   "release_date": "2026-01-24"
 }
