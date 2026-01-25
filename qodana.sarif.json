@@ -75218,8 +75218,8 @@
       "versionControlProvenance": [
         {
           "repositoryUri": "https://github.com/henrikwidlund/unfoldedcircle-systemmonitor.git",
-          "revisionId": "84710682c5b82c2463900624fba00a494ce7f11a",
-          "branch": "qodana-automation-833424169",
+          "revisionId": "5ef0ff3fc24341034ebdb1e6715d53e220b44465",
+          "branch": "feature/battery_level",
           "properties": {
             "repoUrl": "https://github.com/henrikwidlund/unfoldedcircle-systemmonitor.git",
             "lastAuthorName": "Henrik Widlund",
@@ -75232,14 +75232,14 @@
       "artifacts": [
         {
           "location": {
-            "uri": "UnfoldedCircle.SystemMonitor/Http/SystemMonitorClient.cs",
+            "uri": "src/UnfoldedCircle.SystemMonitor/Http/SystemMonitorClient.cs",
             "uriBaseId": "solutionDir"
           },
           "hashes": {}
         },
         {
           "location": {
-            "uri": "UnfoldedCircle.SystemMonitor/WebSocket/SystemMonitorWebSocketHandler.cs",
+            "uri": "src/UnfoldedCircle.SystemMonitor/WebSocket/SystemMonitorWebSocketHandler.cs",
             "uriBaseId": "solutionDir"
           },
           "hashes": {}
@@ -75258,26 +75258,26 @@
             {
               "physicalLocation": {
                 "artifactLocation": {
-                  "uri": "UnfoldedCircle.SystemMonitor/Http/SystemMonitorClient.cs",
+                  "uri": "src/UnfoldedCircle.SystemMonitor/Http/SystemMonitorClient.cs",
                   "uriBaseId": "solutionDir"
                 },
                 "region": {
-                  "startLine": 10,
+                  "startLine": 13,
                   "startColumn": 5,
-                  "endLine": 10,
+                  "endLine": 13,
                   "endColumn": 58,
-                  "charOffset": 297,
+                  "charOffset": 371,
                   "charLength": 53,
                   "snippet": {
                     "text": "private readonly HttpClient _httpClient = httpClient;"
                   }
                 },
                 "contextRegion": {
-                  "startLine": 9,
+                  "startLine": 12,
                   "startColumn": 1,
-                  "endLine": 11,
+                  "endLine": 14,
                   "endColumn": 68,
-                  "charOffset": 291,
+                  "charOffset": 365,
                   "charLength": 127,
                   "snippet": {
                     "text": "{\n    private readonly HttpClient _httpClient = httpClient;\n    private readonly ILogger<SystemMonitorClient> _logger = logger;"
@@ -75289,7 +75289,7 @@
           "partialFingerprints": {
             "equalIndicator/v1": "88C08BA054AAAA212B6F813F5123EB08FD729CA57BD937362E5EE5DDA90BE9C0"
           },
-          "baselineState": "new",
+          "baselineState": "unchanged",
           "properties": {
             "qodanaSeverity": "Moderate",
             "tags": [
@@ -75310,79 +75310,27 @@
             {
               "physicalLocation": {
                 "artifactLocation": {
-                  "uri": "UnfoldedCircle.SystemMonitor/Http/SystemMonitorClient.cs",
-                  "uriBaseId": "solutionDir"
-                },
-                "region": {
-                  "startLine": 11,
-                  "startColumn": 5,
-                  "endLine": 11,
-                  "endColumn": 68,
-                  "charOffset": 355,
-                  "charLength": 63,
-                  "snippet": {
-                    "text": "private readonly ILogger<SystemMonitorClient> _logger = logger;"
-                  }
-                },
-                "contextRegion": {
-                  "startLine": 10,
-                  "startColumn": 1,
-                  "endLine": 12,
-                  "endColumn": 114,
-                  "charOffset": 293,
-                  "charLength": 239,
-                  "snippet": {
-                    "text": "    private readonly HttpClient _httpClient = httpClient;\n    private readonly ILogger<SystemMonitorClient> _logger = logger;\n    public async Task<SystemMonitorResponse?> GetSystemStatusAsync(CancellationToken cancellationToken = default)"
-                  }
-                }
-              }
-            }
-          ],
-          "partialFingerprints": {
-            "equalIndicator/v1": "E7FDB2AAF37ADDC7E5C027490D1B420993067D7165187C2427276345FD040613"
-          },
-          "baselineState": "new",
-          "properties": {
-            "qodanaSeverity": "Moderate",
-            "tags": [
-              "C#",
-              ".NET 10.0"
-            ]
-          }
-        },
-        {
-          "ruleId": "ReplaceWithPrimaryConstructorParameter",
-          "ruleIndex": 2650,
-          "kind": "fail",
-          "level": "note",
-          "message": {
-            "text": "Replace with primary constructor parameter"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "UnfoldedCircle.SystemMonitor/WebSocket/SystemMonitorWebSocketHandler.cs",
+                  "uri": "src/UnfoldedCircle.SystemMonitor/WebSocket/SystemMonitorWebSocketHandler.cs",
                   "uriBaseId": "solutionDir",
                   "index": 1
                 },
                 "region": {
-                  "startLine": 26,
+                  "startLine": 27,
                   "startColumn": 5,
-                  "endLine": 26,
+                  "endLine": 27,
                   "endColumn": 74,
-                  "charOffset": 1037,
+                  "charOffset": 1063,
                   "charLength": 69,
                   "snippet": {
                     "text": "private readonly IServiceProvider _serviceProvider = serviceProvider;"
                   }
                 },
                 "contextRegion": {
-                  "startLine": 25,
+                  "startLine": 26,
                   "startColumn": 1,
-                  "endLine": 27,
+                  "endLine": 28,
                   "endColumn": 1,
-                  "charOffset": 1031,
+                  "charOffset": 1057,
                   "charLength": 76,
                   "snippet": {
                     "text": "{\n    private readonly IServiceProvider _serviceProvider = serviceProvider;\n"
@@ -75393,6 +75341,58 @@
           ],
           "partialFingerprints": {
             "equalIndicator/v1": "03BFF17C9173300713F894F0811717665AAFC14FFE5D4D3FB6C1A3EFE509EB48"
+          },
+          "baselineState": "unchanged",
+          "properties": {
+            "qodanaSeverity": "Moderate",
+            "tags": [
+              "C#",
+              ".NET 10.0"
+            ]
+          }
+        },
+        {
+          "ruleId": "ReplaceWithPrimaryConstructorParameter",
+          "ruleIndex": 2650,
+          "kind": "fail",
+          "level": "note",
+          "message": {
+            "text": "Replace with primary constructor parameter"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/UnfoldedCircle.SystemMonitor/Http/SystemMonitorClient.cs",
+                  "uriBaseId": "solutionDir"
+                },
+                "region": {
+                  "startLine": 14,
+                  "startColumn": 5,
+                  "endLine": 14,
+                  "endColumn": 68,
+                  "charOffset": 429,
+                  "charLength": 63,
+                  "snippet": {
+                    "text": "private readonly ILogger<SystemMonitorClient> _logger = logger;"
+                  }
+                },
+                "contextRegion": {
+                  "startLine": 13,
+                  "startColumn": 1,
+                  "endLine": 15,
+                  "endColumn": 1,
+                  "charOffset": 367,
+                  "charLength": 126,
+                  "snippet": {
+                    "text": "    private readonly HttpClient _httpClient = httpClient;\n    private readonly ILogger<SystemMonitorClient> _logger = logger;\n"
+                  }
+                }
+              }
+            }
+          ],
+          "partialFingerprints": {
+            "equalIndicator/v1": "4FD537973EC4160ACA757AEA62614637D3DE15C47AE68C5E698E4DEE5789D18F"
           },
           "baselineState": "new",
           "properties": {
@@ -75405,10 +75405,10 @@
         }
       ],
       "automationDetails": {
-        "id": "QDNETC/qodana/2026-01-24",
-        "guid": "3a90d109-2887-4f32-a4c6-8ad5d314f0ac",
+        "id": "QDNETC/qodana/2026-01-25",
+        "guid": "3b18d658-c983-40c4-96a3-2a87f4e82585",
         "properties": {
-          "jobUrl": "https://github.com/henrikwidlund/unfoldedcircle-systemmonitor/actions/runs/21320322900"
+          "jobUrl": "https://github.com/henrikwidlund/unfoldedcircle-systemmonitor/actions/runs/21332926198"
         }
       },
       "newlineSequences": [
