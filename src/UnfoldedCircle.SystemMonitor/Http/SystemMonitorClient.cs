@@ -1,4 +1,7 @@
 using System.Globalization;
+using System.Net.Http.Headers;
+using System.Text;
+using System.Text.Json;
 using System.Text.Json.Serialization;
 using UnfoldedCircle.SystemMonitor.Json;
 using UnfoldedCircle.SystemMonitor.Logging;
@@ -9,17 +12,64 @@ public class SystemMonitorClient(HttpClient httpClient, ILogger<SystemMonitorCli
 {
     private readonly HttpClient _httpClient = httpClient;
     private readonly ILogger<SystemMonitorClient> _logger = logger;
-    public async Task<SystemMonitorResponse?> GetSystemStatusAsync(CancellationToken cancellationToken = default)
+
+    public async ValueTask<SystemMonitorResponse?> GetSystemStatusAsync(string wsId, CancellationToken cancellationToken = default)
     {
-        using var response = await _httpClient.GetAsync((Uri?)null, cancellationToken);
+        using var response = await _httpClient.GetAsync("pub/status", cancellationToken);
         if (response.IsSuccessStatusCode)
-            return await response.Content.ReadFromJsonAsync<SystemMonitorResponse>(
+            return await response.Content.ReadFromJsonAsync(
                 SystemMonitorSerializerContext.Default.SystemMonitorResponse,
                 cancellationToken
             );
 
-        _logger.SystemStatusEndpointFail(response.StatusCode);
+        _logger.SystemStatusEndpointFail(wsId, response.StatusCode);
         return null;
+    }
+
+    public async ValueTask<int?> GetBatteryLevelAsync(string wsId, string accessToken, CancellationToken cancellationToken = default)
+    {
+        using var request = new HttpRequestMessage(HttpMethod.Get, "system/power/battery");
+        request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
+        using var response = await _httpClient.SendAsync(request, cancellationToken);
+        if (!response.IsSuccessStatusCode)
+            return null;
+
+        using JsonDocument jsonDocument = await JsonDocument.ParseAsync(await response.Content.ReadAsStreamAsync(cancellationToken), cancellationToken: cancellationToken);
+        if (jsonDocument.RootElement.TryGetProperty("capacity", out var batteryLevelElement) &&
+            batteryLevelElement.ValueKind == JsonValueKind.Number &&
+            batteryLevelElement.TryGetInt32(out var batteryLevel))
+            return batteryLevel;
+
+        _logger.BatteryLevelParseFail(wsId);
+        return null;
+    }
+
+    public async ValueTask<string?> GetApiKeyAsync(string wsId, string pin, CancellationToken cancellationToken)
+    {
+        using var request = new HttpRequestMessage(HttpMethod.Post, "auth/api_keys");
+        request.Headers.Authorization = new AuthenticationHeaderValue("Basic", Convert.ToBase64String(Encoding.UTF8.GetBytes($"web-configurator:{pin}")));
+        request.Content = JsonContent.Create(new ApiKeyRequest($"System Monitor Client {(DateTime.UtcNow.Ticks % 1000).ToString(NumberFormatInfo.InvariantInfo)}", ["admin"]),
+            SystemMonitorSerializerContext.Default.ApiKeyRequest);
+        using var response = await _httpClient.SendAsync(request, cancellationToken);
+
+        if (!response.IsSuccessStatusCode)
+        {
+            _logger.ApiKeyRequestFail(wsId, response.StatusCode);
+            return null;
+        }
+
+        var apiKeyResponse = await response.Content.ReadFromJsonAsync(
+            SystemMonitorSerializerContext.Default.ApiKeyResponse,
+            cancellationToken
+        );
+
+        if (apiKeyResponse == null)
+        {
+            _logger.ApiKeyParseFail(wsId);
+            return null;
+        }
+
+        return apiKeyResponse.ApiKey;
     }
 }
 
@@ -94,6 +144,12 @@ public sealed record UserData(
     public string GetDetails()
         => $"{Math.Round(Used.ToMegabytes(), 1).ToString(NumberFormatInfo.InvariantInfo)} MB / {Math.Round((Available + Used).ToMegabytes(), 1).ToString(NumberFormatInfo.InvariantInfo)} MB";
 }
+
+public record ApiKeyRequest(
+    [property: JsonPropertyName("name")] string Name,
+    [property: JsonPropertyName("scopes")] string[] Scopes);
+
+public record ApiKeyResponse([property: JsonPropertyName("api_key")] string ApiKey);
 
 public static class NumberExtensions
 {

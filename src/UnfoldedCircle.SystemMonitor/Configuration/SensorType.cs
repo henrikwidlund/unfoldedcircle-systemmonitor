@@ -31,5 +31,8 @@ public enum SensorType : sbyte
     FileSystemPercentage,
 
     [Display(Name = "File System Details")]
-    FileSystemDetails
+    FileSystemDetails,
+
+    [Display(Name = "Battery Percentage")]
+    BatteryPercentage
 }
