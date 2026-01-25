@@ -12,6 +12,16 @@ This repository contains the server code for hosting a system monitor integratio
 - Remote Two
 - Remote 3
 
+## Supported Sensors
+- Memory Percentage
+- Memory Details
+- Swap Percentage
+- Swap Details
+- CPU Usage Last 1/5/15 Minutes
+- File System Percentage
+- File System Details
+- Battery Percentage
+
 ## Prerequisites
 
 ### Running
