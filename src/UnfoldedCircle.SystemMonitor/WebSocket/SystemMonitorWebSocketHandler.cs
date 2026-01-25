@@ -85,7 +85,7 @@ internal sealed class SystemMonitorWebSocketHandler(
         var configuration = await _configurationService.GetConfigurationAsync(cancellationTokenSource.Token);
         var configurationItem = configuration.Entities.FirstOrDefault();
         string? apiKey = configurationItem?.ApiKey;
-        sbyte? intervalSeconds = null;
+        sbyte? intervalSeconds = configurationItem?.IntervalSeconds;
         using var periodicTimer = new PeriodicTimer(TimeSpan.FromSeconds(intervalSeconds ?? 10));
         while (!cancellationTokenSource.IsCancellationRequested && await periodicTimer.WaitForNextTickAsync(cancellationTokenSource.Token))
         {
