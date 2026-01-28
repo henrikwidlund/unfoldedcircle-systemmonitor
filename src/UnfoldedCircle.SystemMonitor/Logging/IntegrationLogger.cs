@@ -20,10 +20,6 @@ internal static partial class IntegrationLogger
         Message = "{WSId} Failed to get system status: {StatusCode}")]
     public static partial void SystemStatusEndpointFail(this ILogger logger, string wsId, in HttpStatusCode statusCode);
 
-    [LoggerMessage(EventId = 5, EventName = nameof(BroadcastTokenCancelled), Level = LogLevel.Debug,
-        Message = "{WSId} Broadcast token is cancelled {IsCancellationRequested}")]
-    public static partial void BroadcastTokenCancelled(this ILogger logger, string wsId, bool? isCancellationRequested);
-
     [LoggerMessage(EventId = 6, EventName = nameof(BatteryLevelParseFail), Level = LogLevel.Information,
         Message = "{WSId} Failed to parse battery level from response")]
     public static partial void BatteryLevelParseFail(this ILogger logger, string wsId);
