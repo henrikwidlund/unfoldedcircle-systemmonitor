@@ -48,7 +48,7 @@
             <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
         </PackageReference>
         <PackageReference Include="NetEscapades.EnumGenerators.Interceptors" Version="1.0.0-beta20" />
-        <PackageReference Include="Theodicean.UnfoldedCircle.Server" Version="0.0.6-pre08" />
+        <PackageReference Include="Theodicean.UnfoldedCircle.Server" Version="0.0.6-pre11" />
     </ItemGroup>
 
 </Project>
