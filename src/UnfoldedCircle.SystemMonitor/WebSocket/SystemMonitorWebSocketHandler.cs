@@ -77,7 +77,7 @@ internal sealed class SystemMonitorWebSocketHandler(
         }
 
         using var periodicTimer = new PeriodicTimer(TimeSpan.FromSeconds(intervalSeconds ?? 10));
-        while (!cancellationToken.IsCancellationRequested && await periodicTimer.WaitForNextTickAsync(cancellationToken))
+        do
         {
             if (subscribedEntitiesHolder.SubscribedEntities.Count == 0)
                 continue;
@@ -114,7 +114,7 @@ internal sealed class SystemMonitorWebSocketHandler(
                     _ => Task.CompletedTask
                 });
             }
-        }
+        } while (!cancellationToken.IsCancellationRequested && await periodicTimer.WaitForNextTickAsync(cancellationToken));
     }
 
     private async Task<(string? apiKey, sbyte? intervalSeconds)> WaitForValidConfig(CancellationToken cancellationToken)
