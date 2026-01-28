@@ -120,14 +120,14 @@ internal sealed class SystemMonitorWebSocketHandler(
     private async Task<(string? apiKey, sbyte? intervalSeconds)> WaitForValidConfig(CancellationToken cancellationToken)
     {
         using var periodicTimer = new PeriodicTimer(TimeSpan.FromSeconds(1));
-        while (!cancellationToken.IsCancellationRequested && await periodicTimer.WaitForNextTickAsync(cancellationToken))
+        do
         {
             var configuration = await _configurationService.GetConfigurationAsync(cancellationToken);
             var configurationItem = configuration.Entities.FirstOrDefault();
             string? apiKey = configurationItem?.ApiKey;
             if (!string.IsNullOrEmpty(apiKey))
                 return (apiKey, configurationItem?.IntervalSeconds);
-        }
+        } while (!cancellationToken.IsCancellationRequested && await periodicTimer.WaitForNextTickAsync(cancellationToken));
 
         return default;
     }
