@@ -90,7 +90,7 @@ internal sealed class SystemMonitorWebSocketHandler(
 
             await using var scope = _serviceProvider.CreateAsyncScope();
             var systemMonitorClient = scope.ServiceProvider.GetRequiredService<SystemMonitorClient>();
-            var monitorResponse = useSystemEndpoint ?  await systemMonitorClient.GetSystemStatusAsync(wsId, cancellationToken) : null;
+            var monitorResponse = useSystemEndpoint ? await systemMonitorClient.GetSystemStatusAsync(wsId, cancellationToken) : null;
             var batteryLevel = useBatteryEndpoint ? await systemMonitorClient.GetBatteryLevelAsync(wsId, apiKey, cancellationToken) : null;
             if (monitorResponse is null && batteryLevel is null)
                 continue;
