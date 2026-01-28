@@ -134,19 +134,19 @@ internal sealed class SystemMonitorWebSocketHandler(
 
     private static (bool useBatteryEndpoint, bool useSystemEndpoint) GetEndpointTypes(HashSet<string> flattenedSubscribedEntityIds)
     {
-        bool hasBattery = false, useSystemEndpoint = false;
+        bool useBatteryEndpoint = false, useSystemEndpoint = false;
         foreach (var entityId in flattenedSubscribedEntityIds)
         {
             if (entityId.EndsWith(nameof(SensorType.BatteryPercentage), StringComparison.OrdinalIgnoreCase))
-                hasBattery = true;
+                useBatteryEndpoint = true;
             else
                 useSystemEndpoint = true;
 
-            if (hasBattery && useSystemEndpoint)
+            if (useBatteryEndpoint && useSystemEndpoint)
                 break;
         }
 
-        return (hasBattery, useSystemEndpoint);
+        return (useBatteryEndpoint, useSystemEndpoint);
     }
 
     private static readonly ConcurrentDictionary<SensorType, int> PreviousSensorValuesMap = new();
