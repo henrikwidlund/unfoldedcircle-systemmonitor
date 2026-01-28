@@ -67,73 +67,86 @@ internal sealed class SystemMonitorWebSocketHandler(
     protected override ValueTask OnExitStandbyAsync(ExitStandbyEvent payload, string wsId, CancellationToken cancellationToken)
         => ValueTask.CompletedTask;
 
-    protected override async Task HandleEventUpdatesAsync(System.Net.WebSockets.WebSocket socket, string wsId, CancellationTokenWrapper cancellationTokenWrapper)
+    protected override async Task HandleEventUpdatesAsync(System.Net.WebSockets.WebSocket socket, string wsId, SubscribedEntitiesHolder subscribedEntitiesHolder, CancellationToken cancellationToken)
     {
-        if (!IsSocketSubscribedToEvents(wsId))
-            return;
-
-        if (!TryAddSocketBroadcastingEvents(wsId))
-            return;
-
-        var cancellationTokenSource = cancellationTokenWrapper.GetCurrentBroadcastCancellationTokenSource();
-        if (cancellationTokenSource is null || cancellationTokenSource.IsCancellationRequested)
+        (string? apiKey, sbyte? intervalSeconds) = await WaitForValidConfig(cancellationToken);
+        if (string.IsNullOrEmpty(apiKey))
         {
-            _logger.BroadcastTokenCancelled(wsId, cancellationTokenSource?.IsCancellationRequested);
+            _logger.NoConfigurationsFound(wsId);
             return;
         }
 
-        var configuration = await _configurationService.GetConfigurationAsync(cancellationTokenSource.Token);
-        var configurationItem = configuration.Entities.FirstOrDefault();
-        string? apiKey = configurationItem?.ApiKey;
-        sbyte? intervalSeconds = configurationItem?.IntervalSeconds;
         using var periodicTimer = new PeriodicTimer(TimeSpan.FromSeconds(intervalSeconds ?? 10));
-        while (!cancellationTokenSource.IsCancellationRequested && await periodicTimer.WaitForNextTickAsync(cancellationTokenSource.Token))
+        do
         {
-            if (string.IsNullOrEmpty(apiKey))
-            {
-                configuration = await _configurationService.GetConfigurationAsync(cancellationTokenSource.Token);
-                configurationItem = configuration.Entities.FirstOrDefault();
-                apiKey = configurationItem?.ApiKey;
-                if (string.IsNullOrEmpty(apiKey))
-                    continue;
-
-                intervalSeconds = configurationItem?.IntervalSeconds;
-                periodicTimer.Period = TimeSpan.FromSeconds(intervalSeconds ?? 10);
-            }
-
-            var subscribedEntityIds = GetSubscribedEntityIds();
-            if (subscribedEntityIds.Count == 0)
+            if (subscribedEntitiesHolder.SubscribedEntities.Count == 0)
                 continue;
+
+            var flattenedSubscribedEntityIds = subscribedEntitiesHolder.SubscribedEntities
+                .SelectMany(static x => x.Value)
+                .Select(static x => x.EntityId)
+                .ToHashSet(StringComparer.OrdinalIgnoreCase);
+            (bool useBatteryEndpoint, bool useSystemEndpoint) = GetEndpointTypes(flattenedSubscribedEntityIds);
 
             await using var scope = _serviceProvider.CreateAsyncScope();
             var systemMonitorClient = scope.ServiceProvider.GetRequiredService<SystemMonitorClient>();
-            var monitorResponse = await systemMonitorClient.GetSystemStatusAsync(wsId, cancellationTokenSource.Token);
-            var batteryLevel = await systemMonitorClient.GetBatteryLevelAsync(wsId, apiKey, cancellationTokenSource.Token);
+            var monitorResponse = useSystemEndpoint ? await systemMonitorClient.GetSystemStatusAsync(wsId, cancellationToken) : null;
+            var batteryLevel = useBatteryEndpoint ? await systemMonitorClient.GetBatteryLevelAsync(wsId, apiKey, cancellationToken) : null;
             if (monitorResponse is null && batteryLevel is null)
                 continue;
 
-            foreach (var sensorType in SensorType.GetValues())
+            foreach ((SensorType sensorType, string entityId) in SensorType.GetValues()
+                         .Select(static x => (sensorType: x, entityId: EntityId.GetIdentifier(EntityType.Sensor, x.ToStringFast())))
+                         .Where(x => flattenedSubscribedEntityIds.Contains(x.entityId)))
             {
-                var entityId = EntityId.GetIdentifier(EntityType.Sensor, sensorType.ToStringFast());
-                if (!subscribedEntityIds.Contains(entityId, StringComparer.OrdinalIgnoreCase))
-                    continue;
-
                 await (sensorType switch
                 {
-                    SensorType.MemoryPercentage => SendMemoryPercentageSensor(socket, wsId, entityId, monitorResponse, cancellationTokenSource.Token),
-                    SensorType.MemoryDetails => SendMemoryDetailsSensor(socket, wsId, entityId, monitorResponse, cancellationTokenSource.Token),
-                    SensorType.SwapPercentage => SendSwapPercentageSensor(socket, wsId, entityId, monitorResponse, cancellationTokenSource.Token),
-                    SensorType.SwapDetails => SendSwapDetailsSensor(socket, wsId, entityId, monitorResponse, cancellationTokenSource.Token),
-                    SensorType.CpuUsagePercentLast1Minute => SendCpuUsagePercentLast1MinuteSensor(socket, wsId, entityId, monitorResponse, cancellationTokenSource.Token),
-                    SensorType.CpuUsagePercentLast5Minutes => SendCpuUsagePercentLast5MinuteSensor(socket, wsId, entityId, monitorResponse, cancellationTokenSource.Token),
-                    SensorType.CpuUsagePercentLast15Minutes => SendCpuUsagePercentLast15MinuteSensor(socket, wsId, entityId, monitorResponse, cancellationTokenSource.Token),
-                    SensorType.FileSystemPercentage => SendFileSystemPercentageSensor(socket, wsId, entityId, monitorResponse, cancellationTokenSource.Token),
-                    SensorType.FileSystemDetails => SendFileSystemDetailsSensor(socket, wsId, entityId, monitorResponse, cancellationTokenSource.Token),
-                    SensorType.BatteryPercentage => SendBatteryPercentageSensor(socket, wsId, entityId, batteryLevel, cancellationTokenSource.Token),
+                    SensorType.MemoryPercentage => SendMemoryPercentageSensor(socket, wsId, entityId, monitorResponse, cancellationToken),
+                    SensorType.MemoryDetails => SendMemoryDetailsSensor(socket, wsId, entityId, monitorResponse, cancellationToken),
+                    SensorType.SwapPercentage => SendSwapPercentageSensor(socket, wsId, entityId, monitorResponse, cancellationToken),
+                    SensorType.SwapDetails => SendSwapDetailsSensor(socket, wsId, entityId, monitorResponse, cancellationToken),
+                    SensorType.CpuUsagePercentLast1Minute => SendCpuUsagePercentLast1MinuteSensor(socket, wsId, entityId, monitorResponse, cancellationToken),
+                    SensorType.CpuUsagePercentLast5Minutes => SendCpuUsagePercentLast5MinuteSensor(socket, wsId, entityId, monitorResponse, cancellationToken),
+                    SensorType.CpuUsagePercentLast15Minutes => SendCpuUsagePercentLast15MinuteSensor(socket, wsId, entityId, monitorResponse, cancellationToken),
+                    SensorType.FileSystemPercentage => SendFileSystemPercentageSensor(socket, wsId, entityId, monitorResponse, cancellationToken),
+                    SensorType.FileSystemDetails => SendFileSystemDetailsSensor(socket, wsId, entityId, monitorResponse, cancellationToken),
+                    SensorType.BatteryPercentage => SendBatteryPercentageSensor(socket, wsId, entityId, batteryLevel, cancellationToken),
                     _ => Task.CompletedTask
                 });
             }
+        } while (!cancellationToken.IsCancellationRequested && await periodicTimer.WaitForNextTickAsync(cancellationToken));
+    }
+
+    private async Task<(string? apiKey, sbyte? intervalSeconds)> WaitForValidConfig(CancellationToken cancellationToken)
+    {
+        using var periodicTimer = new PeriodicTimer(TimeSpan.FromSeconds(1));
+        do
+        {
+            var configuration = await _configurationService.GetConfigurationAsync(cancellationToken);
+            var configurationItem = configuration.Entities.FirstOrDefault();
+            string? apiKey = configurationItem?.ApiKey;
+            if (!string.IsNullOrEmpty(apiKey))
+                return (apiKey, configurationItem?.IntervalSeconds);
+        } while (!cancellationToken.IsCancellationRequested && await periodicTimer.WaitForNextTickAsync(cancellationToken));
+
+        return default;
+    }
+
+    private static (bool useBatteryEndpoint, bool useSystemEndpoint) GetEndpointTypes(HashSet<string> flattenedSubscribedEntityIds)
+    {
+        bool useBatteryEndpoint = false, useSystemEndpoint = false;
+        foreach (var entityId in flattenedSubscribedEntityIds)
+        {
+            if (entityId.EndsWith(nameof(SensorType.BatteryPercentage), StringComparison.OrdinalIgnoreCase))
+                useBatteryEndpoint = true;
+            else
+                useSystemEndpoint = true;
+
+            if (useBatteryEndpoint && useSystemEndpoint)
+                break;
         }
+
+        return (useBatteryEndpoint, useSystemEndpoint);
     }
 
     private static readonly ConcurrentDictionary<SensorType, int> PreviousSensorValuesMap = new();
@@ -439,38 +452,23 @@ internal sealed class SystemMonitorWebSocketHandler(
         if (payload.MsgData?.EntityIds is not { Length: > 0 })
             return ValueTask.CompletedTask;
 
-        foreach (var sensorType in SensorType.GetValues())
-        {
-            var identifier = EntityId.GetIdentifier(EntityType.Sensor, sensorType.ToStringFast());
-            if (payload.MsgData.EntityIds.Contains(identifier))
-            {
-                TryAddEntityIdToBroadcastingEvents(identifier, cancellationTokenWrapper);
-                _ = Task.Factory.StartNew(() => HandleEventUpdatesAsync(socket, wsId, cancellationTokenWrapper),
-                    TaskCreationOptions.LongRunning);
-            }
-        }
+        foreach (string msgDataEntityId in payload.MsgData.EntityIds)
+            cancellationTokenWrapper.AddSubscribedEntity(msgDataEntityId);
 
-        return ValueTask.CompletedTask;
+        return cancellationTokenWrapper.StartEventProcessing();
     }
 
     protected override ValueTask OnUnsubscribeEventsAsync(UnsubscribeEventsMsg payload, string wsId, CancellationTokenWrapper cancellationTokenWrapper)
     {
         if (payload.MsgData?.EntityIds is { Length: > 0 })
         {
-            foreach (var msgDataEntityId in payload.MsgData.EntityIds)
-            {
-                RemoveEntityIdToBroadcastingEvents(msgDataEntityId, cancellationTokenWrapper);
-            }
+            foreach (string msgDataEntityId in payload.MsgData.EntityIds)
+                cancellationTokenWrapper.RemoveSubscribedEntity(msgDataEntityId);
         }
 
         // If no specific device or entity was specified, dispose all clients for this websocket ID.
         if (payload.MsgData is { DeviceId: null, EntityIds: null })
-        {
-            foreach (var sensorType in SensorType.GetValues())
-            {
-                RemoveEntityIdToBroadcastingEvents(EntityId.GetIdentifier(EntityType.Sensor, sensorType.ToStringFast()), cancellationTokenWrapper);
-            }
-        }
+            cancellationTokenWrapper.RemoveAllSubscribedEntities();
 
         return ValueTask.CompletedTask;
     }
