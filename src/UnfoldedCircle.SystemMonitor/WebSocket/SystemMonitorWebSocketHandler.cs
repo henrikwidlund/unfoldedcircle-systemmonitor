@@ -124,9 +124,8 @@ internal sealed class SystemMonitorWebSocketHandler(
         {
             var configuration = await _configurationService.GetConfigurationAsync(cancellationToken);
             var configurationItem = configuration.Entities.FirstOrDefault();
-            string? apiKey = configurationItem?.ApiKey;
-            if (!string.IsNullOrEmpty(apiKey))
-                return (apiKey, configurationItem?.IntervalSeconds);
+            if (!string.IsNullOrEmpty(configurationItem?.ApiKey))
+                return (configurationItem.ApiKey, configurationItem.IntervalSeconds);
         } while (!cancellationToken.IsCancellationRequested && await periodicTimer.WaitForNextTickAsync(cancellationToken));
 
         return default;
