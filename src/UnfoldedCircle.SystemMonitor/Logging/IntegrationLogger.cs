@@ -31,4 +31,12 @@ internal static partial class IntegrationLogger
     [LoggerMessage(EventId = 8, EventName = nameof(ApiKeyParseFail), Level = LogLevel.Information,
         Message = "{WSId} Failed to parse API key from response")]
     public static partial void ApiKeyParseFail(this ILogger logger, string wsId);
+
+    private static readonly Action<ILogger, string, Exception> FailureDuringEventAction = LoggerMessage.Define<string>(
+        LogLevel.Error,
+        new EventId(9, nameof(FailureDuringEvent)),
+        "{WSId} Failure during event.");
+
+    public static void FailureDuringEvent(this ILogger logger, Exception exception, string wsId) =>
+        FailureDuringEventAction(logger, wsId, exception);
 }
