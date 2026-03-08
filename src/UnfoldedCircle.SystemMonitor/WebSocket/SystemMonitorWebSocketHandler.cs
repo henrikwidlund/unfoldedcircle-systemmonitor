@@ -661,7 +661,7 @@ internal sealed class SystemMonitorWebSocketHandler(
         return configuration.Entities;
     }
 
-    private IEnumerable<AvailableEntity> GetAvailableEntities(
+    private static IEnumerable<AvailableEntity> GetAvailableEntities(
         List<SystemMonitorConfigurationItem>? entities,
         GetAvailableEntitiesMsg payload)
     {
