@@ -12,7 +12,7 @@ builder.Services.AddHttpClient<SystemMonitorClient>(static (provider, client) =>
     client.BaseAddress = new Uri(provider.GetRequiredService<IConfiguration>()["ApiBaseAddress"] ?? "http://localhost/api/");
     client.DefaultRequestHeaders.Accept.Clear();
     client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
-});
+}).AddStandardResilienceHandler();
 var app = builder.Build();
 
 app.UseUnfoldedCircleServer<SystemMonitorWebSocketHandler, SystemMonitorConfigurationItem>();
