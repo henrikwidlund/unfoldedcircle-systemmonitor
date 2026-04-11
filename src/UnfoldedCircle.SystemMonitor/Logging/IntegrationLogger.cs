@@ -39,4 +39,8 @@ internal static partial class IntegrationLogger
 
     public static void FailureDuringEvent(this ILogger logger, Exception exception, string wsId) =>
         FailureDuringEventAction(logger, wsId, exception);
+
+    [LoggerMessage(EventId = 9, EventName = nameof(BackupDataDataNullDuringRestore), Level = LogLevel.Error,
+        Message = "BackupData null during restore.")]
+    public static partial void BackupDataDataNullDuringRestore(this ILogger logger);
 }
