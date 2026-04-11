@@ -600,15 +600,23 @@ internal sealed class SystemMonitorWebSocketHandler(
 
     protected override async ValueTask<RestoreResult> HandleRestoreFromBackupAsync(string wsId, string jsonRestoreData, CancellationToken cancellationToken)
     {
-        var config = JsonSerializer.Deserialize(jsonRestoreData, SystemMonitorSerializerContext.Default.UnfoldedCircleConfigurationSystemMonitorConfigurationItem);
-        if (config is null)
+        try
         {
-            _logger.BackupDataDataNullDuringRestore();
+            var config = JsonSerializer.Deserialize(jsonRestoreData, SystemMonitorSerializerContext.Default.UnfoldedCircleConfigurationSystemMonitorConfigurationItem);
+            if (config is null)
+            {
+                _logger.BackupDataNullDuringRestore(wsId);
+                return RestoreResult.Failure;
+            }
+
+            await _configurationService.UpdateConfigurationAsync(config, cancellationToken);
+            return RestoreResult.Success;
+        }
+        catch (Exception e)
+        {
+            _logger.ExceptionDuringRestore(e, wsId);
             return RestoreResult.Failure;
         }
-
-        await _configurationService.UpdateConfigurationAsync(config, cancellationToken);
-        return RestoreResult.Success;
     }
 
     private async ValueTask<SetupDriverUserDataResult> HandleSetup(SetDriverUserDataMsg payload, string wsId, SystemMonitorConfigurationItem configurationItem, CancellationToken cancellationToken)
