@@ -39,4 +39,16 @@ internal static partial class IntegrationLogger
 
     public static void FailureDuringEvent(this ILogger logger, Exception exception, string wsId) =>
         FailureDuringEventAction(logger, wsId, exception);
+
+    [LoggerMessage(EventId = 10, EventName = nameof(BackupDataNullDuringRestore), Level = LogLevel.Error,
+        Message = "[{WSId}] BackupData null during restore.")]
+    public static partial void BackupDataNullDuringRestore(this ILogger logger, string wsId);
+
+    private static readonly Action<ILogger, string, Exception> ExceptionDuringRestoreAction = LoggerMessage.Define<string>(
+        LogLevel.Error,
+        new EventId(11, nameof(ExceptionDuringRestore)),
+        "[{WSId}] Exception during restore.");
+
+    public static void ExceptionDuringRestore(this ILogger logger, Exception exception, string wsId) =>
+        ExceptionDuringRestoreAction(logger, wsId, exception);
 }

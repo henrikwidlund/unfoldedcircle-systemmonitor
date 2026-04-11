@@ -13,6 +13,7 @@ using UnfoldedCircle.Server.Response;
 using UnfoldedCircle.Server.WebSocket;
 using UnfoldedCircle.SystemMonitor.Configuration;
 using UnfoldedCircle.SystemMonitor.Http;
+using UnfoldedCircle.SystemMonitor.Json;
 using UnfoldedCircle.SystemMonitor.Logging;
 
 namespace UnfoldedCircle.SystemMonitor.WebSocket;
@@ -559,6 +560,12 @@ internal sealed class SystemMonitorWebSocketHandler(
     protected override ValueTask<SetupDriverUserDataResult> OnSetupDriverUserDataConfirmAsync(System.Net.WebSockets.WebSocket socket, SetDriverUserDataMsg payload, string wsId, CancellationToken cancellationToken)
         => ValueTask.FromResult(SetupDriverUserDataResult.Finalized);
 
+    protected override async ValueTask<string> GetJsonBackupDataAsync(CancellationToken cancellationToken)
+    {
+        var config = await _configurationService.GetConfigurationAsync(cancellationToken);
+        return JsonSerializer.Serialize(config, SystemMonitorSerializerContext.Default.UnfoldedCircleConfigurationSystemMonitorConfigurationItem);
+    }
+
     protected override ValueTask<SettingsPage> CreateNewEntitySettingsPageAsync(CancellationToken cancellationToken)
         => ValueTask.FromResult(CreateSettingsPage(null));
 
@@ -590,6 +597,27 @@ internal sealed class SystemMonitorWebSocketHandler(
     protected override ValueTask<SetupDriverUserDataResult> HandleEntityReconfigured(System.Net.WebSockets.WebSocket socket, SetDriverUserDataMsg payload, string wsId, SystemMonitorConfigurationItem configurationItem,
         CancellationToken cancellationToken) =>
         HandleSetup(payload, wsId, configurationItem, cancellationToken);
+
+    protected override async ValueTask<RestoreResult> HandleRestoreFromBackupAsync(string wsId, string jsonRestoreData, CancellationToken cancellationToken)
+    {
+        try
+        {
+            var config = JsonSerializer.Deserialize(jsonRestoreData, SystemMonitorSerializerContext.Default.UnfoldedCircleConfigurationSystemMonitorConfigurationItem);
+            if (config is null)
+            {
+                _logger.BackupDataNullDuringRestore(wsId);
+                return RestoreResult.Failure;
+            }
+
+            await _configurationService.UpdateConfigurationAsync(config, cancellationToken);
+            return RestoreResult.Success;
+        }
+        catch (Exception e)
+        {
+            _logger.ExceptionDuringRestore(e, wsId);
+            return RestoreResult.Failure;
+        }
+    }
 
     private async ValueTask<SetupDriverUserDataResult> HandleSetup(SetDriverUserDataMsg payload, string wsId, SystemMonitorConfigurationItem configurationItem, CancellationToken cancellationToken)
     {
