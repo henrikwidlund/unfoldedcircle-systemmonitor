@@ -43,13 +43,13 @@
     </ItemGroup>
 
     <ItemGroup>
-        <PackageReference Include="Meziantou.Analyzer" Version="3.0.46">
+        <PackageReference Include="Meziantou.Analyzer" Version="3.0.47">
             <PrivateAssets>all</PrivateAssets>
             <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
         </PackageReference>
         <PackageReference Include="Microsoft.Extensions.Http.Resilience" Version="10.4.0" />
         <PackageReference Include="NetEscapades.EnumGenerators.Interceptors" Version="1.0.0-beta21" />
-        <PackageReference Include="Theodicean.UnfoldedCircle.Server" Version="0.0.10-pre10" />
+        <PackageReference Include="Theodicean.UnfoldedCircle.Server" Version="0.0.10" />
     </ItemGroup>
 
 </Project>
