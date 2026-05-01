@@ -235,7 +235,7 @@ internal sealed class SystemMonitorWebSocketHandler(
         PreviousSensorValuesMap[SensorType.MemoryPercentage] = systemMonitorResponse.Memory.GetHashCode();
 
         await SendMessageAsync(socket,
-            ResponsePayloadHelpers.CreateSensorStateChangedResponsePayload(
+            ResponsePayloadHelpers.CreateSensorStateChangedPayload(
                 new SensorStateChangedEventMessageDataAttributes<double>
                 {
                     State = SensorState.On,
@@ -263,7 +263,7 @@ internal sealed class SystemMonitorWebSocketHandler(
         PreviousSensorValuesMap[SensorType.MemoryDetails] = systemMonitorResponse.Memory.GetHashCode();
 
         await SendMessageAsync(socket,
-            ResponsePayloadHelpers.CreateSensorStateChangedResponsePayload(
+            ResponsePayloadHelpers.CreateSensorStateChangedPayload(
                 new SensorStateChangedEventMessageDataAttributes<string>
                 {
                     State = SensorState.On,
@@ -291,7 +291,7 @@ internal sealed class SystemMonitorWebSocketHandler(
         PreviousSensorValuesMap[SensorType.SwapPercentage] = systemMonitorResponse.Memory.GetHashCode();
 
         await SendMessageAsync(socket,
-            ResponsePayloadHelpers.CreateSensorStateChangedResponsePayload(
+            ResponsePayloadHelpers.CreateSensorStateChangedPayload(
                 new SensorStateChangedEventMessageDataAttributes<double>
                 {
                     State = SensorState.On,
@@ -319,7 +319,7 @@ internal sealed class SystemMonitorWebSocketHandler(
         PreviousSensorValuesMap[SensorType.SwapDetails] = systemMonitorResponse.Memory.GetHashCode();
 
         await SendMessageAsync(socket,
-            ResponsePayloadHelpers.CreateSensorStateChangedResponsePayload(
+            ResponsePayloadHelpers.CreateSensorStateChangedPayload(
                 new SensorStateChangedEventMessageDataAttributes<string>
                 {
                     State = SensorState.On,
@@ -347,7 +347,7 @@ internal sealed class SystemMonitorWebSocketHandler(
         PreviousSensorValuesMap[SensorType.CpuUsagePercentLast1Minute] = systemMonitorResponse.LoadAvg.GetHashCode();
 
         await SendMessageAsync(socket,
-            ResponsePayloadHelpers.CreateSensorStateChangedResponsePayload(
+            ResponsePayloadHelpers.CreateSensorStateChangedPayload(
                 new SensorStateChangedEventMessageDataAttributes<string>
                 {
                     State = SensorState.On,
@@ -375,7 +375,7 @@ internal sealed class SystemMonitorWebSocketHandler(
         PreviousSensorValuesMap[SensorType.CpuUsagePercentLast5Minutes] = systemMonitorResponse.LoadAvg.GetHashCode();
 
         await SendMessageAsync(socket,
-            ResponsePayloadHelpers.CreateSensorStateChangedResponsePayload(
+            ResponsePayloadHelpers.CreateSensorStateChangedPayload(
                 new SensorStateChangedEventMessageDataAttributes<string>
                 {
                     State = SensorState.On,
@@ -403,7 +403,7 @@ internal sealed class SystemMonitorWebSocketHandler(
         PreviousSensorValuesMap[SensorType.CpuUsagePercentLast15Minutes] = systemMonitorResponse.LoadAvg.GetHashCode();
 
         await SendMessageAsync(socket,
-            ResponsePayloadHelpers.CreateSensorStateChangedResponsePayload(
+            ResponsePayloadHelpers.CreateSensorStateChangedPayload(
                 new SensorStateChangedEventMessageDataAttributes<string>
                 {
                     State = SensorState.On,
@@ -431,7 +431,7 @@ internal sealed class SystemMonitorWebSocketHandler(
         PreviousSensorValuesMap[SensorType.FileSystemPercentage] = systemMonitorResponse.Filesystem.GetHashCode();
 
         await SendMessageAsync(socket,
-            ResponsePayloadHelpers.CreateSensorStateChangedResponsePayload(
+            ResponsePayloadHelpers.CreateSensorStateChangedPayload(
                 new SensorStateChangedEventMessageDataAttributes<double>
                 {
                     State = SensorState.On,
@@ -459,7 +459,7 @@ internal sealed class SystemMonitorWebSocketHandler(
         PreviousSensorValuesMap[SensorType.FileSystemDetails] = systemMonitorResponse.Filesystem.GetHashCode();
 
         await SendMessageAsync(socket,
-            ResponsePayloadHelpers.CreateSensorStateChangedResponsePayload(
+            ResponsePayloadHelpers.CreateSensorStateChangedPayload(
                 new SensorStateChangedEventMessageDataAttributes<string>
                 {
                     State = SensorState.On,
@@ -487,7 +487,7 @@ internal sealed class SystemMonitorWebSocketHandler(
         PreviousSensorValuesMap[SensorType.BatteryPercentage] = batteryPercentage.Value;
 
         await SendMessageAsync(socket,
-            ResponsePayloadHelpers.CreateSensorStateChangedResponsePayload(
+            ResponsePayloadHelpers.CreateSensorStateChangedPayload(
                 new SensorStateChangedEventMessageDataAttributes<int>
                 {
                     State = SensorState.On,

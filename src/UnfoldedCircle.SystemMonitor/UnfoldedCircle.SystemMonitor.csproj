@@ -12,13 +12,10 @@
         <EnableTrimAnalyzer>true</EnableTrimAnalyzer>
         <IsTrimmable>true</IsTrimmable>
         <IsAotCompatible>true</IsAotCompatible>
+        <RuntimeIdentifiers>linux-x64;linux-arm64;osx-arm64;osx-x64;win-x64;win-arm64</RuntimeIdentifiers>
     </PropertyGroup>
 
-    <PropertyGroup Condition="'$(PublishUsingAot)' == 'true'">
-        <PublishAot>true</PublishAot>
-    </PropertyGroup>
-
-    <PropertyGroup Condition="'$(PublishUsingAot)' != 'true'">
+    <PropertyGroup Condition="'$(PublishAot)' != 'true'">
         <PublishSingleFile>true</PublishSingleFile>
         <PublishTrimmed>true</PublishTrimmed>
     </PropertyGroup>
@@ -43,13 +40,13 @@
     </ItemGroup>
 
     <ItemGroup>
-        <PackageReference Include="Meziantou.Analyzer" Version="3.0.47">
+        <PackageReference Include="Meziantou.Analyzer" Version="3.0.58">
             <PrivateAssets>all</PrivateAssets>
             <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
         </PackageReference>
         <PackageReference Include="Microsoft.Extensions.Http.Resilience" Version="10.5.0" />
         <PackageReference Include="NetEscapades.EnumGenerators.Interceptors" Version="1.0.0-beta21" />
-        <PackageReference Include="Theodicean.UnfoldedCircle.Server" Version="0.0.10" />
+        <PackageReference Include="Theodicean.UnfoldedCircle.Server" Version="0.0.11" />
     </ItemGroup>
 
 </Project>
