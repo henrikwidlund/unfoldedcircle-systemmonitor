@@ -121,9 +121,9 @@ public sealed record CpuInfo(
     [property: JsonPropertyName("fifteen")] double Fifteen
 )
 {
-    public string GetLoadLastMinute() => $"{Math.Round(One * 100, 1).ToString(NumberFormatInfo.InvariantInfo)}";
-    public string GetLoadLastFiveMinutes() => $"{Math.Round(Five * 100, 1).ToString(NumberFormatInfo.InvariantInfo)}";
-    public string GetLoadLastFifteenMinutes() => $"{Math.Round(Fifteen * 100, 1).ToString(NumberFormatInfo.InvariantInfo)}";
+    public string GetLoadLastMinute() => $"{Math.Round(One * 100, 1, MidpointRounding.ToEven).ToString(NumberFormatInfo.InvariantInfo)}";
+    public string GetLoadLastFiveMinutes() => $"{Math.Round(Five * 100, 1, MidpointRounding.ToEven).ToString(NumberFormatInfo.InvariantInfo)}";
+    public string GetLoadLastFifteenMinutes() => $"{Math.Round(Fifteen * 100, 1, MidpointRounding.ToEven).ToString(NumberFormatInfo.InvariantInfo)}";
 }
 
 /// <summary>
@@ -142,7 +142,7 @@ public sealed record UserData(
 {
     public double GetPercentage() => Math.Round((double)Used / (Available + Used) * 100, 2);
     public string GetDetails()
-        => $"{Math.Round(Used.ToMegabytes(), 1).ToString(NumberFormatInfo.InvariantInfo)} MB / {Math.Round((Available + Used).ToMegabytes(), 1).ToString(NumberFormatInfo.InvariantInfo)} MB";
+        => $"{Math.Round(Used.ToMegabytes(), 1, MidpointRounding.ToEven).ToString(NumberFormatInfo.InvariantInfo)} MB / {Math.Round((Available + Used).ToMegabytes(), 1, MidpointRounding.ToEven).ToString(NumberFormatInfo.InvariantInfo)} MB";
 }
 
 public record ApiKeyRequest(
@@ -157,7 +157,7 @@ public static class NumberExtensions
     {
         public double ToMegabytes()
         {
-            return number == 0 ? 0d : Math.Round(number / 1048576d, 1); // 1024*1024
+            return number == 0 ? 0d : Math.Round(number / 1048576d, 1, MidpointRounding.ToEven); // 1024*1024
         }
     }
 }
