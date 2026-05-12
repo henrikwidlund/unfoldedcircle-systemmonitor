@@ -140,7 +140,7 @@ public sealed record UserData(
     [property: JsonPropertyName("used")] ulong Used
 )
 {
-    public double GetPercentage() => Math.Round((double)Used / (Available + Used) * 100, 2);
+    public double GetPercentage() => Math.Round((double)Used / (Available + Used) * 100, 2, MidpointRounding.ToEven);
     public string GetDetails()
         => $"{Math.Round(Used.ToMegabytes(), 1, MidpointRounding.ToEven).ToString(NumberFormatInfo.InvariantInfo)} MB / {Math.Round((Available + Used).ToMegabytes(), 1, MidpointRounding.ToEven).ToString(NumberFormatInfo.InvariantInfo)} MB";
 }
