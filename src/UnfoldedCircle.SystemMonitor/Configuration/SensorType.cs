@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations;
+
 using NetEscapades.EnumGenerators;
 
 namespace UnfoldedCircle.SystemMonitor.Configuration;

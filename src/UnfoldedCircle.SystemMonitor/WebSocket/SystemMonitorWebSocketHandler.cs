@@ -2,7 +2,9 @@ using System.Collections.Concurrent;
 using System.Collections.Frozen;
 using System.Globalization;
 using System.Text.Json;
+
 using Microsoft.Extensions.Options;
+
 using UnfoldedCircle.Models.Events;
 using UnfoldedCircle.Models.Shared;
 using UnfoldedCircle.Models.Sync;
@@ -719,7 +721,7 @@ internal sealed class SystemMonitorWebSocketHandler(
 
         yield break;
 
-        SensorAvailableEntity GetSensorEntity(SystemMonitorConfigurationItem configurationItem, in SensorType sensorType)
+        static SensorAvailableEntity GetSensorEntity(SystemMonitorConfigurationItem configurationItem, in SensorType sensorType)
         {
             var sensorSuffix = sensorType.ToStringFast();
             var entityId = configurationItem.EntityId.GetIdentifier(EntityType.Sensor, sensorSuffix);

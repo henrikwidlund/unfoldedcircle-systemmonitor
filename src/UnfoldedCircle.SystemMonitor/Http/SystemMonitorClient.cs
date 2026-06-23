@@ -3,6 +3,7 @@ using System.Net.Http.Headers;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+
 using UnfoldedCircle.SystemMonitor.Json;
 using UnfoldedCircle.SystemMonitor.Logging;
 
@@ -130,7 +131,7 @@ public sealed record CpuInfo(
 /// Filesystem status
 /// </summary>
 public sealed record FileSystemInfo(
-    [property:JsonPropertyName("user_data")] UserData UserData
+    [property: JsonPropertyName("user_data")] UserData UserData
 );
 
 /// <param name="Available">Amount of available disk space in bytes</param>
