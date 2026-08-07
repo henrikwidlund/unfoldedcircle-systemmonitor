@@ -40,14 +40,14 @@
     </ItemGroup>
 
     <ItemGroup>
-        <PackageReference Include="Meziantou.Analyzer" Version="3.0.123">
+        <PackageReference Include="Meziantou.Analyzer" Version="3.0.140">
             <PrivateAssets>all</PrivateAssets>
             <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
         </PackageReference>
         <PackageReference Include="Microsoft.DotNet.ILCompiler" Version="10.0.10" />
         <PackageReference Include="Microsoft.Extensions.Http.Resilience" Version="10.8.0" />
         <PackageReference Include="NetEscapades.EnumGenerators.Interceptors" Version="1.0.0-beta21" />
-        <PackageReference Include="Theodicean.UnfoldedCircle.Server" Version="0.0.12" />
+        <PackageReference Include="Theodicean.UnfoldedCircle.Server" Version="0.0.14" />
     </ItemGroup>
 
 </Project>

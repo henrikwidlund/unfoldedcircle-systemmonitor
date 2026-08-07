@@ -219,7 +219,7 @@ internal sealed class SystemMonitorWebSocketHandler(
         return (useBatteryEndpoint, useSystemEndpoint);
     }
 
-    private static readonly ConcurrentDictionary<SensorType, int> PreviousSensorValuesMap = new();
+    private static readonly ConcurrentDictionary<SensorType, object?> PreviousSensorValuesMap = new();
 
     private async Task SendMemoryPercentageSensor(System.Net.WebSockets.WebSocket socket,
         string wsId,
@@ -231,10 +231,10 @@ internal sealed class SystemMonitorWebSocketHandler(
             return;
 
         if (PreviousSensorValuesMap.TryGetValue(SensorType.MemoryPercentage, out var previousValue) &&
-            previousValue == systemMonitorResponse.Memory.GetHashCode())
+            Equals(previousValue, systemMonitorResponse.Memory))
             return;
 
-        PreviousSensorValuesMap[SensorType.MemoryPercentage] = systemMonitorResponse.Memory.GetHashCode();
+        PreviousSensorValuesMap[SensorType.MemoryPercentage] = systemMonitorResponse.Memory;
 
         await SendMessageAsync(socket,
             ResponsePayloadHelpers.CreateSensorStateChangedPayload(
@@ -259,10 +259,10 @@ internal sealed class SystemMonitorWebSocketHandler(
             return;
 
         if (PreviousSensorValuesMap.TryGetValue(SensorType.MemoryDetails, out var previousValue) &&
-            previousValue == systemMonitorResponse.Memory.GetHashCode())
+            Equals(previousValue, systemMonitorResponse.Memory))
             return;
 
-        PreviousSensorValuesMap[SensorType.MemoryDetails] = systemMonitorResponse.Memory.GetHashCode();
+        PreviousSensorValuesMap[SensorType.MemoryDetails] = systemMonitorResponse.Memory;
 
         await SendMessageAsync(socket,
             ResponsePayloadHelpers.CreateSensorStateChangedPayload(
@@ -287,10 +287,10 @@ internal sealed class SystemMonitorWebSocketHandler(
             return;
 
         if (PreviousSensorValuesMap.TryGetValue(SensorType.SwapPercentage, out var previousValue) &&
-            previousValue == systemMonitorResponse.Memory.GetHashCode())
+            Equals(previousValue, systemMonitorResponse.Memory))
             return;
 
-        PreviousSensorValuesMap[SensorType.SwapPercentage] = systemMonitorResponse.Memory.GetHashCode();
+        PreviousSensorValuesMap[SensorType.SwapPercentage] = systemMonitorResponse.Memory;
 
         await SendMessageAsync(socket,
             ResponsePayloadHelpers.CreateSensorStateChangedPayload(
@@ -315,10 +315,10 @@ internal sealed class SystemMonitorWebSocketHandler(
             return;
 
         if (PreviousSensorValuesMap.TryGetValue(SensorType.SwapDetails, out var previousValue) &&
-            previousValue == systemMonitorResponse.Memory.GetHashCode())
+            Equals(previousValue, systemMonitorResponse.Memory))
             return;
 
-        PreviousSensorValuesMap[SensorType.SwapDetails] = systemMonitorResponse.Memory.GetHashCode();
+        PreviousSensorValuesMap[SensorType.SwapDetails] = systemMonitorResponse.Memory;
 
         await SendMessageAsync(socket,
             ResponsePayloadHelpers.CreateSensorStateChangedPayload(
@@ -343,10 +343,10 @@ internal sealed class SystemMonitorWebSocketHandler(
             return;
 
         if (PreviousSensorValuesMap.TryGetValue(SensorType.CpuUsagePercentLast1Minute, out var previousValue) &&
-            previousValue == systemMonitorResponse.LoadAvg.GetHashCode())
+            Equals(previousValue, systemMonitorResponse.LoadAvg))
             return;
 
-        PreviousSensorValuesMap[SensorType.CpuUsagePercentLast1Minute] = systemMonitorResponse.LoadAvg.GetHashCode();
+        PreviousSensorValuesMap[SensorType.CpuUsagePercentLast1Minute] = systemMonitorResponse.LoadAvg;
 
         await SendMessageAsync(socket,
             ResponsePayloadHelpers.CreateSensorStateChangedPayload(
@@ -371,10 +371,10 @@ internal sealed class SystemMonitorWebSocketHandler(
             return;
 
         if (PreviousSensorValuesMap.TryGetValue(SensorType.CpuUsagePercentLast5Minutes, out var previousValue) &&
-            previousValue == systemMonitorResponse.LoadAvg.GetHashCode())
+            Equals(previousValue, systemMonitorResponse.LoadAvg))
             return;
 
-        PreviousSensorValuesMap[SensorType.CpuUsagePercentLast5Minutes] = systemMonitorResponse.LoadAvg.GetHashCode();
+        PreviousSensorValuesMap[SensorType.CpuUsagePercentLast5Minutes] = systemMonitorResponse.LoadAvg;
 
         await SendMessageAsync(socket,
             ResponsePayloadHelpers.CreateSensorStateChangedPayload(
@@ -399,10 +399,10 @@ internal sealed class SystemMonitorWebSocketHandler(
             return;
 
         if (PreviousSensorValuesMap.TryGetValue(SensorType.CpuUsagePercentLast15Minutes, out var previousValue) &&
-            previousValue == systemMonitorResponse.LoadAvg.GetHashCode())
+            Equals(previousValue, systemMonitorResponse.LoadAvg))
             return;
 
-        PreviousSensorValuesMap[SensorType.CpuUsagePercentLast15Minutes] = systemMonitorResponse.LoadAvg.GetHashCode();
+        PreviousSensorValuesMap[SensorType.CpuUsagePercentLast15Minutes] = systemMonitorResponse.LoadAvg;
 
         await SendMessageAsync(socket,
             ResponsePayloadHelpers.CreateSensorStateChangedPayload(
@@ -427,10 +427,10 @@ internal sealed class SystemMonitorWebSocketHandler(
             return;
 
         if (PreviousSensorValuesMap.TryGetValue(SensorType.FileSystemPercentage, out var previousValue) &&
-            previousValue == systemMonitorResponse.Filesystem.GetHashCode())
+            Equals(previousValue, systemMonitorResponse.Filesystem))
             return;
 
-        PreviousSensorValuesMap[SensorType.FileSystemPercentage] = systemMonitorResponse.Filesystem.GetHashCode();
+        PreviousSensorValuesMap[SensorType.FileSystemPercentage] = systemMonitorResponse.Filesystem;
 
         await SendMessageAsync(socket,
             ResponsePayloadHelpers.CreateSensorStateChangedPayload(
@@ -455,10 +455,10 @@ internal sealed class SystemMonitorWebSocketHandler(
             return;
 
         if (PreviousSensorValuesMap.TryGetValue(SensorType.FileSystemDetails, out var previousValue) &&
-            previousValue == systemMonitorResponse.Filesystem.GetHashCode())
+            Equals(previousValue, systemMonitorResponse.Filesystem))
             return;
 
-        PreviousSensorValuesMap[SensorType.FileSystemDetails] = systemMonitorResponse.Filesystem.GetHashCode();
+        PreviousSensorValuesMap[SensorType.FileSystemDetails] = systemMonitorResponse.Filesystem;
 
         await SendMessageAsync(socket,
             ResponsePayloadHelpers.CreateSensorStateChangedPayload(
@@ -483,7 +483,7 @@ internal sealed class SystemMonitorWebSocketHandler(
             return;
 
         if (PreviousSensorValuesMap.TryGetValue(SensorType.BatteryPercentage, out var previousValue) &&
-            previousValue == batteryPercentage.Value)
+            Equals(previousValue, batteryPercentage.Value))
             return;
 
         PreviousSensorValuesMap[SensorType.BatteryPercentage] = batteryPercentage.Value;

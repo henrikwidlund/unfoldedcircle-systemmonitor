@@ -102,7 +102,7 @@ public sealed record MemoryInfo(
     [property: JsonPropertyName("used_swap")] ulong UsedSwap
 )
 {
-    public double GetMemoryUsagePercentage() => (int)((double)UsedMemory / TotalMemory * 100);
+    public double GetMemoryUsagePercentage() => TotalMemory == 0 ? 0 : Math.Round((double)UsedMemory / TotalMemory * 100, 1, MidpointRounding.ToEven);
     public string GetMemoryUsageDetails()
         => $"{UsedMemory.ToMegabytes().ToString(NumberFormatInfo.InvariantInfo)} MB / {TotalMemory.ToMegabytes().ToString(NumberFormatInfo.InvariantInfo)} MB";
     public double GetSwapUsagePercentage() => TotalSwap == 0 ? 0 : (double)UsedSwap / TotalSwap * 100;
