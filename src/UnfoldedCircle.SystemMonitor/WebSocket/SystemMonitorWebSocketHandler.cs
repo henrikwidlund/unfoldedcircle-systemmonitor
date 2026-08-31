@@ -21,11 +21,11 @@ using UnfoldedCircle.SystemMonitor.Logging;
 namespace UnfoldedCircle.SystemMonitor.WebSocket;
 
 internal sealed class SystemMonitorWebSocketHandler(
-    IConfigurationService<SystemMonitorConfigurationItem> configurationService,
+    IConfigurationService<UnfoldedCircleGlobalConfiguration, SystemMonitorConfigurationItem> configurationService,
     IOptions<UnfoldedCircleOptions> options,
     IServiceProvider serviceProvider,
     ILogger<SystemMonitorWebSocketHandler> logger)
-    : UnfoldedCircleWebSocketHandler<MediaPlayerCommandId, SystemMonitorConfigurationItem>(configurationService, options, logger)
+    : UnfoldedCircleWebSocketHandler<MediaPlayerCommandId, UnfoldedCircleGlobalConfiguration, SystemMonitorConfigurationItem>(configurationService, options, logger)
 {
     private readonly IServiceProvider _serviceProvider = serviceProvider;
 
@@ -565,7 +565,7 @@ internal sealed class SystemMonitorWebSocketHandler(
     protected override async ValueTask<string> GetJsonBackupDataAsync(CancellationToken cancellationToken)
     {
         var config = await _configurationService.GetConfigurationAsync(cancellationToken);
-        return JsonSerializer.Serialize(config, SystemMonitorSerializerContext.Default.UnfoldedCircleConfigurationSystemMonitorConfigurationItem);
+        return JsonSerializer.Serialize(config, SystemMonitorSerializerContext.Default.UnfoldedCircleConfigurationUnfoldedCircleGlobalConfigurationSystemMonitorConfigurationItem);
     }
 
     protected override ValueTask<SettingsPage> CreateNewEntitySettingsPageAsync(CancellationToken cancellationToken)
@@ -604,14 +604,18 @@ internal sealed class SystemMonitorWebSocketHandler(
     {
         try
         {
-            var config = JsonSerializer.Deserialize(jsonRestoreData, SystemMonitorSerializerContext.Default.UnfoldedCircleConfigurationSystemMonitorConfigurationItem);
+            var config = JsonSerializer.Deserialize(jsonRestoreData, SystemMonitorSerializerContext.Default.UnfoldedCircleConfigurationUnfoldedCircleGlobalConfigurationSystemMonitorConfigurationItem);
             if (config is null)
             {
                 _logger.BackupDataNullDuringRestore(wsId);
                 return RestoreResult.Failure;
             }
 
-            await _configurationService.UpdateConfigurationAsync(config, cancellationToken);
+            // ReSharper disable once ConditionIsAlwaysTrueOrFalseAccordingToNullableAPIContract // source generated deserialize doesn't care about default values
+            var restoredConfig = config.GlobalConfiguration is null
+                ? config with { GlobalConfiguration = new UnfoldedCircleGlobalConfiguration() }
+                : config;
+            await _configurationService.UpdateConfigurationAsync(restoredConfig, cancellationToken);
             return RestoreResult.Success;
         }
         catch (Exception e)

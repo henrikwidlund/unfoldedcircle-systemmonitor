@@ -1,12 +1,13 @@
 using System.Net.Http.Headers;
 
+using UnfoldedCircle.Server.Configuration;
 using UnfoldedCircle.SystemMonitor.Configuration;
 using UnfoldedCircle.SystemMonitor.Http;
 using UnfoldedCircle.SystemMonitor.WebSocket;
 
 var builder = WebApplication.CreateSlimBuilder(args);
 
-builder.AddUnfoldedCircleServer<SystemMonitorWebSocketHandler, SystemMonitorConfigurationService, SystemMonitorConfigurationItem>();
+builder.AddUnfoldedCircleServer<SystemMonitorWebSocketHandler, SystemMonitorConfigurationService, UnfoldedCircleGlobalConfiguration, SystemMonitorConfigurationItem>();
 builder.Services.AddHttpClient<SystemMonitorClient>(static (provider, client) =>
 {
     client.BaseAddress = new Uri(provider.GetRequiredService<IConfiguration>()["ApiBaseAddress"] ?? "http://localhost/api/");
@@ -15,6 +16,6 @@ builder.Services.AddHttpClient<SystemMonitorClient>(static (provider, client) =>
 }).AddStandardResilienceHandler();
 var app = builder.Build();
 
-app.UseUnfoldedCircleServer<SystemMonitorWebSocketHandler, SystemMonitorConfigurationItem>();
+app.UseUnfoldedCircleServer<SystemMonitorWebSocketHandler, UnfoldedCircleGlobalConfiguration, SystemMonitorConfigurationItem>();
 
 await app.RunAsync();

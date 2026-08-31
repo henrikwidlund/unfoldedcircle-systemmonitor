@@ -5,8 +5,8 @@ using UnfoldedCircle.SystemMonitor.Json;
 
 namespace UnfoldedCircle.SystemMonitor.Configuration;
 
-public class SystemMonitorConfigurationService(IConfiguration configuration) : ConfigurationService<SystemMonitorConfigurationItem>(configuration)
+public class SystemMonitorConfigurationService(IConfiguration configuration) : ConfigurationService<UnfoldedCircleGlobalConfiguration, SystemMonitorConfigurationItem>(configuration)
 {
-    protected override JsonTypeInfo<UnfoldedCircleConfiguration<SystemMonitorConfigurationItem>> GetSerializer()
-        => SystemMonitorSerializerContext.Default.UnfoldedCircleConfigurationSystemMonitorConfigurationItem;
+    protected override JsonTypeInfo<UnfoldedCircleConfiguration<UnfoldedCircleGlobalConfiguration, SystemMonitorConfigurationItem>> GetSerializer()
+        => SystemMonitorSerializerContext.Default.UnfoldedCircleConfigurationUnfoldedCircleGlobalConfigurationSystemMonitorConfigurationItem;
 }

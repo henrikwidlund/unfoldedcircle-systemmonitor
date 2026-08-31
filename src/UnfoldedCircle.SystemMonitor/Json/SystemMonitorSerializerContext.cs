@@ -7,7 +7,7 @@ using UnfoldedCircle.SystemMonitor.Http;
 
 namespace UnfoldedCircle.SystemMonitor.Json;
 
-[JsonSerializable(typeof(UnfoldedCircleConfiguration<SystemMonitorConfigurationItem>))]
+[JsonSerializable(typeof(UnfoldedCircleConfiguration<UnfoldedCircleGlobalConfiguration, SystemMonitorConfigurationItem>))]
 [JsonSerializable(typeof(SystemMonitorResponse))]
 [JsonSerializable(typeof(ApiKeyRequest))]
 [JsonSerializable(typeof(ApiKeyResponse))]
