@@ -725,7 +725,7 @@ internal sealed class SystemMonitorWebSocketHandler(
 
         yield break;
 
-        static SensorAvailableEntity GetSensorEntity(SystemMonitorConfigurationItem configurationItem, in SensorType sensorType)
+        static SensorAvailableEntity GetSensorEntity(SystemMonitorConfigurationItem configurationItem, SensorType sensorType)
         {
             var sensorSuffix = sensorType.ToStringFast();
             var entityId = configurationItem.EntityId.GetIdentifier(EntityType.Sensor, sensorSuffix);
@@ -741,7 +741,7 @@ internal sealed class SystemMonitorWebSocketHandler(
             };
         }
 
-        static SensorOptions GetSensorOptions(in SensorType sensorType) =>
+        static SensorOptions GetSensorOptions(SensorType sensorType) =>
             sensorType switch
             {
                 SensorType.MemoryPercentage => new SensorOptions
