@@ -4,51 +4,34 @@ namespace UnfoldedCircle.SystemMonitor.Logging;
 
 internal static partial class IntegrationLogger
 {
-    [LoggerMessage(EventId = 1, EventName = nameof(NoConfigurationsFound), Level = LogLevel.Information,
-        Message = "[{WSId}] WS: No configurations found")]
+    [LoggerMessage(EventId = 1, Level = LogLevel.Information, Message = "[{WSId}] WS: No configurations found")]
     public static partial void NoConfigurationsFound(this ILogger logger, string wsId);
 
-    [LoggerMessage(EventId = 2, EventName = nameof(NoEntitiesOnlySensorSupported), Level = LogLevel.Information,
-        Message = "[{WSId}] WS: Only sensor entities are supported, no entities found")]
+    [LoggerMessage(EventId = 2, Level = LogLevel.Information, Message = "[{WSId}] WS: Only sensor entities are supported, no entities found")]
     public static partial void NoEntitiesOnlySensorSupported(this ILogger logger, string wsId);
 
-    [LoggerMessage(EventId = 3, EventName = nameof(AddingConfiguration), Level = LogLevel.Information,
-        Message = "Adding configuration for entity_id '{EntityId}'")]
+    [LoggerMessage(EventId = 3, Level = LogLevel.Information, Message = "Adding configuration for entity_id '{EntityId}'")]
     public static partial void AddingConfiguration(this ILogger logger, string entityId);
 
-    [LoggerMessage(EventId = 4, EventName = nameof(SystemStatusEndpointFail), Level = LogLevel.Information,
-        Message = "{WSId} Failed to get system status: {StatusCode}")]
-    public static partial void SystemStatusEndpointFail(this ILogger logger, string wsId, in HttpStatusCode statusCode);
+    [LoggerMessage(EventId = 4, Level = LogLevel.Information, Message = "{WSId} Failed to get system status: {StatusCode}")]
+    public static partial void SystemStatusEndpointFail(this ILogger logger, string wsId, HttpStatusCode statusCode);
 
-    [LoggerMessage(EventId = 6, EventName = nameof(BatteryLevelParseFail), Level = LogLevel.Information,
-        Message = "{WSId} Failed to parse battery level from response")]
+    [LoggerMessage(EventId = 6, Level = LogLevel.Information, Message = "{WSId} Failed to parse battery level from response")]
     public static partial void BatteryLevelParseFail(this ILogger logger, string wsId);
 
-    [LoggerMessage(EventId = 7, EventName = nameof(ApiKeyRequestFail), Level = LogLevel.Information,
-        Message = "{WSId} API key request failed with status code {StatusCode}")]
-    public static partial void ApiKeyRequestFail(this ILogger logger, string wsId, in HttpStatusCode statusCode);
+    [LoggerMessage(EventId = 7, Level = LogLevel.Information, Message = "{WSId} API key request failed with status code {StatusCode}")]
+    public static partial void ApiKeyRequestFail(this ILogger logger, string wsId, HttpStatusCode statusCode);
 
-    [LoggerMessage(EventId = 8, EventName = nameof(ApiKeyParseFail), Level = LogLevel.Information,
-        Message = "{WSId} Failed to parse API key from response")]
+    [LoggerMessage(EventId = 8, Level = LogLevel.Information, Message = "{WSId} Failed to parse API key from response")]
     public static partial void ApiKeyParseFail(this ILogger logger, string wsId);
 
-    private static readonly Action<ILogger, string, Exception> FailureDuringEventAction = LoggerMessage.Define<string>(
-        LogLevel.Error,
-        new EventId(9, nameof(FailureDuringEvent)),
-        "{WSId} Failure during event.");
-
-    public static void FailureDuringEvent(this ILogger logger, Exception exception, string wsId) =>
-        FailureDuringEventAction(logger, wsId, exception);
+    [LoggerMessage(EventId = 9, Level = LogLevel.Error, Message = "{WSId} Failure during event.")]
+    public static partial void FailureDuringEvent(this ILogger logger, string wsId, Exception exception);
 
     [LoggerMessage(EventId = 10, EventName = nameof(BackupDataNullDuringRestore), Level = LogLevel.Error,
         Message = "[{WSId}] BackupData null during restore.")]
     public static partial void BackupDataNullDuringRestore(this ILogger logger, string wsId);
 
-    private static readonly Action<ILogger, string, Exception> ExceptionDuringRestoreAction = LoggerMessage.Define<string>(
-        LogLevel.Error,
-        new EventId(11, nameof(ExceptionDuringRestore)),
-        "[{WSId}] Exception during restore.");
-
-    public static void ExceptionDuringRestore(this ILogger logger, Exception exception, string wsId) =>
-        ExceptionDuringRestoreAction(logger, wsId, exception);
+    [LoggerMessage(EventId = 11, Level = LogLevel.Error, Message = "[{WSId}] Exception during restore.")]
+    public static partial void ExceptionDuringRestore(this ILogger logger, string wsId, Exception exception);
 }

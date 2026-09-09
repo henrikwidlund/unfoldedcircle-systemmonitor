@@ -149,7 +149,7 @@ internal sealed class SystemMonitorWebSocketHandler(
             catch (Exception e)
             {
                 if (e is not OperationCanceledException)
-                    _logger.FailureDuringEvent(e, wsId);
+                    _logger.FailureDuringEvent(wsId, e);
             }
             finally
             {
@@ -620,7 +620,7 @@ internal sealed class SystemMonitorWebSocketHandler(
         }
         catch (Exception e)
         {
-            _logger.ExceptionDuringRestore(e, wsId);
+            _logger.ExceptionDuringRestore(wsId, e);
             return RestoreResult.Failure;
         }
     }
