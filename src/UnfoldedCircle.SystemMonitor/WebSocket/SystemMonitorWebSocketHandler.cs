@@ -63,7 +63,7 @@ internal sealed class SystemMonitorWebSocketHandler(
         string wsId,
         CancellationTokenWrapper cancellationTokenWrapper,
         CancellationToken commandCancellationToken)
-        => ValueTask.FromResult(new SelectCommandResult(EntityCommandResult.Other, string.Empty));
+        => ValueTask.FromResult<SelectCommandResult>(new SelectFailed());
 
     protected override ValueTask<SelectCommandResult> OnSelectFirstLastCommandAsync(System.Net.WebSockets.WebSocket socket,
         SelectEntityCommandMsgData payload,
@@ -71,7 +71,7 @@ internal sealed class SystemMonitorWebSocketHandler(
         string wsId,
         CancellationTokenWrapper cancellationTokenWrapper,
         CancellationToken commandCancellationToken)
-        => ValueTask.FromResult(new SelectCommandResult(EntityCommandResult.Other, string.Empty));
+        => ValueTask.FromResult<SelectCommandResult>(new SelectFailed());
 
     protected override ValueTask<SelectCommandResult> OnSelectNextPreviousCommandAsync(System.Net.WebSockets.WebSocket socket,
         SelectEntityCommandMsgData payload,
@@ -80,7 +80,7 @@ internal sealed class SystemMonitorWebSocketHandler(
         string wsId,
         CancellationTokenWrapper cancellationTokenWrapper,
         CancellationToken commandCancellationToken)
-        => ValueTask.FromResult(new SelectCommandResult(EntityCommandResult.Other, string.Empty));
+        => ValueTask.FromResult<SelectCommandResult>(new SelectFailed());
 
     protected override ValueTask<bool> IsEntityReachableAsync(string wsId, string entityId, CancellationToken cancellationToken) => ValueTask.FromResult(true);
 

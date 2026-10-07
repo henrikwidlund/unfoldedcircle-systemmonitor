@@ -30,7 +30,7 @@ This repository contains the server code for hosting a system monitor integratio
 
 ### Development
 
-- [dotnet 10 SDK](https://dotnet.microsoft.com/download/dotnet/10.0).
+- [dotnet 11 SDK](https://dotnet.microsoft.com/download/dotnet/11.0).
 
 ## Installing on the remote
 
