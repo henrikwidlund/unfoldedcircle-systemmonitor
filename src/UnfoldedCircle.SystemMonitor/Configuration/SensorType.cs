@@ -5,7 +5,7 @@ using NetEscapades.EnumGenerators;
 namespace UnfoldedCircle.SystemMonitor.Configuration;
 
 [EnumExtensions(IsInterceptable = true, MetadataSource = MetadataSource.DisplayAttribute)]
-public enum SensorType : sbyte
+public enum SensorType : byte
 {
     [Display(Name = "Memory Percentage")]
     MemoryPercentage = 1,
