@@ -1,5 +1,6 @@
 using System.Collections.Concurrent;
 using System.Collections.Frozen;
+using System.Diagnostics;
 using System.Globalization;
 using System.Text.Json;
 
@@ -28,6 +29,9 @@ internal sealed class SystemMonitorWebSocketHandler(
     : UnfoldedCircleWebSocketHandler<MediaPlayerCommandId, UnfoldedCircleGlobalConfiguration, SystemMonitorConfigurationItem>(configurationService, options, logger)
 {
     private readonly IServiceProvider _serviceProvider = serviceProvider;
+    private static readonly TimeSpan MinPollBackoff = TimeSpan.FromSeconds(10);
+    private static readonly TimeSpan MaxPollBackoff = TimeSpan.FromMinutes(5);
+    private volatile bool _isInStandby;
 
     protected override ValueTask<EntityCommandResult> OnRemoteCommandAsync(System.Net.WebSockets.WebSocket socket, RemoteEntityCommandMsgData payload, string command, string wsId, CancellationTokenWrapper cancellationTokenWrapper,
         CancellationToken commandCancellationToken) =>
@@ -114,10 +118,16 @@ internal sealed class SystemMonitorWebSocketHandler(
         => ValueTask.CompletedTask;
 
     protected override ValueTask OnEnterStandbyAsync(EnterStandbyEvent payload, string wsId, CancellationToken cancellationToken)
-        => ValueTask.CompletedTask;
+    {
+        _isInStandby = true;
+        return ValueTask.CompletedTask;
+    }
 
     protected override ValueTask OnExitStandbyAsync(ExitStandbyEvent payload, string wsId, CancellationToken cancellationToken)
-        => ValueTask.CompletedTask;
+    {
+        _isInStandby = false;
+        return ValueTask.CompletedTask;
+    }
 
     protected override async Task HandleEventUpdatesAsync(System.Net.WebSockets.WebSocket socket, string wsId, SubscribedEntitiesHolder subscribedEntitiesHolder, CancellationToken cancellationToken)
     {
@@ -129,9 +139,18 @@ internal sealed class SystemMonitorWebSocketHandler(
         }
 
         using var periodicTimer = new PeriodicTimer(TimeSpan.FromSeconds(intervalSeconds ?? 10));
+        var pollBackoff = TimeSpan.Zero;
+        long lastFailureTimestamp = 0;
         do
         {
             if (subscribedEntitiesHolder.SubscribedEntities.Count == 0)
+                continue;
+
+            // Do not poll the remote's API while it is in standby.
+            if (_isInStandby)
+                continue;
+
+            if (pollBackoff > TimeSpan.Zero && Stopwatch.GetElapsedTime(lastFailureTimestamp) < pollBackoff)
                 continue;
 
             var flattenedSubscribedEntityIds = subscribedEntitiesHolder.SubscribedEntities
@@ -145,11 +164,21 @@ internal sealed class SystemMonitorWebSocketHandler(
             try
             {
                 await ProcessMonitors(socket, wsId, useSystemEndpoint, systemMonitorClient, useBatteryEndpoint, apiKey, flattenedSubscribedEntityIds, cancellationToken);
+                pollBackoff = TimeSpan.Zero;
             }
             catch (Exception e)
             {
                 if (e is not OperationCanceledException)
                     _logger.FailureDuringEvent(wsId, e);
+
+                // Unreachable API: wait longer after each failure.
+                if (!cancellationToken.IsCancellationRequested)
+                {
+                    pollBackoff = pollBackoff == TimeSpan.Zero
+                        ? MinPollBackoff
+                        : TimeSpan.FromTicks(Math.Min(pollBackoff.Ticks * 2, MaxPollBackoff.Ticks));
+                    lastFailureTimestamp = Stopwatch.GetTimestamp();
+                }
             }
             finally
             {
