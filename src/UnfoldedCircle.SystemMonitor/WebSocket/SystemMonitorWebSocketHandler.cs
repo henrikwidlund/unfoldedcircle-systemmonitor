@@ -31,7 +31,12 @@ internal sealed class SystemMonitorWebSocketHandler(
     private readonly IServiceProvider _serviceProvider = serviceProvider;
     private static readonly TimeSpan MinPollBackoff = TimeSpan.FromSeconds(10);
     private static readonly TimeSpan MaxPollBackoff = TimeSpan.FromMinutes(5);
+    private static readonly TimeSpan WakeUpRetryWindow = TimeSpan.FromSeconds(10);
+    private static readonly TimeSpan WakeUpRetryDelay = TimeSpan.FromSeconds(1);
     private volatile bool _isInStandby;
+    private long _exitStandbyTimestamp;
+    // Released to start a poll before the poll interval has passed
+    private readonly SemaphoreSlim _pollRequest = new(0, 1);
 
     protected override ValueTask<EntityCommandResult> OnRemoteCommandAsync(System.Net.WebSockets.WebSocket socket, RemoteEntityCommandMsgData payload, string command, string wsId, CancellationTokenWrapper cancellationTokenWrapper,
         CancellationToken commandCancellationToken) =>
@@ -125,8 +130,24 @@ internal sealed class SystemMonitorWebSocketHandler(
 
     protected override ValueTask OnExitStandbyAsync(ExitStandbyEvent payload, string wsId, CancellationToken cancellationToken)
     {
+        Interlocked.Exchange(ref _exitStandbyTimestamp, Stopwatch.GetTimestamp());
         _isInStandby = false;
         return ValueTask.CompletedTask;
+    }
+
+    private void RequestPoll()
+    {
+        if (_pollRequest.CurrentCount > 0)
+            return;
+
+        try
+        {
+            _pollRequest.Release();
+        }
+        catch (SemaphoreFullException)
+        {
+            // A poll is already requested
+        }
     }
 
     protected override async Task HandleEventUpdatesAsync(System.Net.WebSockets.WebSocket socket, string wsId, SubscribedEntitiesHolder subscribedEntitiesHolder, CancellationToken cancellationToken)
@@ -138,11 +159,16 @@ internal sealed class SystemMonitorWebSocketHandler(
             return;
         }
 
-        using var periodicTimer = new PeriodicTimer(TimeSpan.FromSeconds(intervalSeconds ?? 10));
+        // Clear an earlier poll request, the loop polls at start anyway
+        // ReSharper disable once MethodHasAsyncOverloadWithCancellation
+        _pollRequest.Wait(0);
+        var pollInterval = TimeSpan.FromSeconds(intervalSeconds ?? 10);
+        TimeSpan nextPollDelay;
         var pollBackoff = TimeSpan.Zero;
         long lastFailureTimestamp = 0;
         do
         {
+            nextPollDelay = pollInterval;
             if (subscribedEntitiesHolder.SubscribedEntities.Count == 0)
                 continue;
 
@@ -171,8 +197,13 @@ internal sealed class SystemMonitorWebSocketHandler(
                 if (e is not OperationCanceledException)
                     _logger.FailureDuringEvent(wsId, e);
 
+                // The API can be slow right after wake-up: try again soon without back-off.
+                if (!cancellationToken.IsCancellationRequested && Stopwatch.GetElapsedTime(Interlocked.Read(ref _exitStandbyTimestamp)) < WakeUpRetryWindow)
+                {
+                    nextPollDelay = WakeUpRetryDelay;
+                }
                 // Unreachable API: wait longer after each failure.
-                if (!cancellationToken.IsCancellationRequested)
+                else if (!cancellationToken.IsCancellationRequested)
                 {
                     pollBackoff = pollBackoff == TimeSpan.Zero
                         ? MinPollBackoff
@@ -180,11 +211,14 @@ internal sealed class SystemMonitorWebSocketHandler(
                     lastFailureTimestamp = Stopwatch.GetTimestamp();
                 }
             }
-            finally
-            {
-                PreviousSensorValuesMap.Clear();
-            }
-        } while (!cancellationToken.IsCancellationRequested && await periodicTimer.WaitForNextTickAsync(cancellationToken));
+        } while (!cancellationToken.IsCancellationRequested && await WaitForNextPollAsync(nextPollDelay, cancellationToken));
+    }
+
+    // Returns early when a poll is requested
+    private async Task<bool> WaitForNextPollAsync(TimeSpan delay, CancellationToken cancellationToken)
+    {
+        await _pollRequest.WaitAsync(delay, cancellationToken);
+        return true;
     }
 
     private async Task ProcessMonitors(System.Net.WebSockets.WebSocket socket, string wsId, bool useSystemEndpoint, SystemMonitorClient systemMonitorClient, bool useBatteryEndpoint, string apiKey,
@@ -195,26 +229,18 @@ internal sealed class SystemMonitorWebSocketHandler(
         if (monitorResponse is null && batteryLevel is null)
             return;
 
-        await Parallel.ForEachAsync(SensorType.GetValues()
-            .Select(static x => (sensorType: x, entityId: EntityId.GetIdentifier(EntityType.Sensor, x.ToStringFast())))
-            .Where(x => flattenedSubscribedEntityIds.Contains(x.entityId)), cancellationToken, (async (arg, token) =>
+        foreach (var sensorType in SensorType.GetValues())
         {
-            (SensorType sensorType, string entityId) = arg;
-            await (sensorType switch
-            {
-                SensorType.MemoryPercentage => SendMemoryPercentageSensor(socket, wsId, entityId, monitorResponse, token),
-                SensorType.MemoryDetails => SendMemoryDetailsSensor(socket, wsId, entityId, monitorResponse, token),
-                SensorType.SwapPercentage => SendSwapPercentageSensor(socket, wsId, entityId, monitorResponse, token),
-                SensorType.SwapDetails => SendSwapDetailsSensor(socket, wsId, entityId, monitorResponse, token),
-                SensorType.CpuUsagePercentLast1Minute => SendCpuUsagePercentLast1MinuteSensor(socket, wsId, entityId, monitorResponse, token),
-                SensorType.CpuUsagePercentLast5Minutes => SendCpuUsagePercentLast5MinuteSensor(socket, wsId, entityId, monitorResponse, token),
-                SensorType.CpuUsagePercentLast15Minutes => SendCpuUsagePercentLast15MinuteSensor(socket, wsId, entityId, monitorResponse, token),
-                SensorType.FileSystemPercentage => SendFileSystemPercentageSensor(socket, wsId, entityId, monitorResponse, token),
-                SensorType.FileSystemDetails => SendFileSystemDetailsSensor(socket, wsId, entityId, monitorResponse, token),
-                SensorType.BatteryPercentage => SendBatteryPercentageSensor(socket, wsId, entityId, batteryLevel, token),
-                _ => Task.CompletedTask
-            });
-        }));
+            var suffix = sensorType.ToStringFast();
+            var entityId = EntityId.GetIdentifier(EntityType.Sensor, suffix);
+            if (!flattenedSubscribedEntityIds.Contains(entityId)
+                || CreateSensorState(sensorType, entityId, monitorResponse, batteryLevel) is not { } state
+                || (SentStates.TryGetValue(sensorType, out var previousState) && previousState.Equals(state)))
+                continue;
+
+            SentStates[sensorType] = state;
+            await SendMessageAsync(socket, CreateSensorStateChangedPayload(state, suffix), wsId, cancellationToken);
+        }
     }
 
     private async Task<(string? apiKey, sbyte? intervalSeconds)> WaitForValidConfig(CancellationToken cancellationToken)
@@ -248,287 +274,50 @@ internal sealed class SystemMonitorWebSocketHandler(
         return (useBatteryEndpoint, useSystemEndpoint);
     }
 
-    private static readonly ConcurrentDictionary<SensorType, object?> PreviousSensorValuesMap = new();
+    // Last sent state per sensor, also used for get_entity_states
+    private static readonly ConcurrentDictionary<SensorType, EntityStateChanged> SentStates = new();
 
-    private async Task SendMemoryPercentageSensor(System.Net.WebSockets.WebSocket socket,
-        string wsId,
+    private static EntityStateChanged? CreateSensorState(SensorType sensorType,
         string entityId,
         SystemMonitorResponse? systemMonitorResponse,
-        CancellationToken cancellationToken)
+        int? batteryPercentage)
     {
+        if (sensorType == SensorType.BatteryPercentage)
+            return batteryPercentage is { } battery ? CreateSensorState(entityId, battery) : null;
+
         if (systemMonitorResponse is null)
-            return;
+            return null;
 
-        if (PreviousSensorValuesMap.TryGetValue(SensorType.MemoryPercentage, out var previousValue) &&
-            Equals(previousValue, systemMonitorResponse.Memory))
-            return;
-
-        PreviousSensorValuesMap[SensorType.MemoryPercentage] = systemMonitorResponse.Memory;
-
-        await SendMessageAsync(socket,
-            ResponsePayloadHelpers.CreateSensorStateChangedPayload(
-                new SensorStateChangedEventMessageDataAttributes<double>
-                {
-                    State = SensorState.On,
-                    Value = systemMonitorResponse.Memory.GetMemoryUsagePercentage()
-                },
-                entityId,
-                nameof(SensorType.MemoryPercentage)),
-            wsId,
-            cancellationToken);
+        return sensorType switch
+        {
+            SensorType.MemoryPercentage => CreateSensorState(entityId, systemMonitorResponse.Memory.GetMemoryUsagePercentage()),
+            SensorType.MemoryDetails => CreateSensorState(entityId, systemMonitorResponse.Memory.GetMemoryUsageDetails()),
+            SensorType.SwapPercentage => CreateSensorState(entityId, systemMonitorResponse.Memory.GetSwapUsagePercentage()),
+            SensorType.SwapDetails => CreateSensorState(entityId, systemMonitorResponse.Memory.GetSwapUsageDetails()),
+            SensorType.CpuUsagePercentLast1Minute => CreateSensorState(entityId, systemMonitorResponse.LoadAvg.GetLoadLastMinute()),
+            SensorType.CpuUsagePercentLast5Minutes => CreateSensorState(entityId, systemMonitorResponse.LoadAvg.GetLoadLastFiveMinutes()),
+            SensorType.CpuUsagePercentLast15Minutes => CreateSensorState(entityId, systemMonitorResponse.LoadAvg.GetLoadLastFifteenMinutes()),
+            SensorType.FileSystemPercentage => CreateSensorState(entityId, systemMonitorResponse.Filesystem.UserData.GetPercentage()),
+            SensorType.FileSystemDetails => CreateSensorState(entityId, systemMonitorResponse.Filesystem.UserData.GetDetails()),
+            _ => null
+        };
     }
 
-    private async Task SendMemoryDetailsSensor(System.Net.WebSockets.WebSocket socket,
-        string wsId,
-        string entityId,
-        SystemMonitorResponse? systemMonitorResponse,
-        CancellationToken cancellationToken)
+    private static SensorEntityStateChanged<TValue> CreateSensorState<TValue>(string entityId, TValue value) => new()
     {
-        if (systemMonitorResponse is null)
-            return;
+        EntityId = entityId,
+        EntityType = EntityType.Sensor,
+        Attributes = new SensorStateChangedEventMessageDataAttributes<TValue> { State = SensorState.On, Value = value }
+    };
 
-        if (PreviousSensorValuesMap.TryGetValue(SensorType.MemoryDetails, out var previousValue) &&
-            Equals(previousValue, systemMonitorResponse.Memory))
-            return;
-
-        PreviousSensorValuesMap[SensorType.MemoryDetails] = systemMonitorResponse.Memory;
-
-        await SendMessageAsync(socket,
-            ResponsePayloadHelpers.CreateSensorStateChangedPayload(
-                new SensorStateChangedEventMessageDataAttributes<string>
-                {
-                    State = SensorState.On,
-                    Value = systemMonitorResponse.Memory.GetMemoryUsageDetails()
-                },
-                entityId,
-                nameof(SensorType.MemoryDetails)),
-            wsId,
-            cancellationToken);
-    }
-
-    private async Task SendSwapPercentageSensor(System.Net.WebSockets.WebSocket socket,
-        string wsId,
-        string entityId,
-        SystemMonitorResponse? systemMonitorResponse,
-        CancellationToken cancellationToken)
-    {
-        if (systemMonitorResponse is null)
-            return;
-
-        if (PreviousSensorValuesMap.TryGetValue(SensorType.SwapPercentage, out var previousValue) &&
-            Equals(previousValue, systemMonitorResponse.Memory))
-            return;
-
-        PreviousSensorValuesMap[SensorType.SwapPercentage] = systemMonitorResponse.Memory;
-
-        await SendMessageAsync(socket,
-            ResponsePayloadHelpers.CreateSensorStateChangedPayload(
-                new SensorStateChangedEventMessageDataAttributes<double>
-                {
-                    State = SensorState.On,
-                    Value = systemMonitorResponse.Memory.GetSwapUsagePercentage()
-                },
-                entityId,
-                nameof(SensorType.SwapPercentage)),
-            wsId,
-            cancellationToken);
-    }
-
-    private async Task SendSwapDetailsSensor(System.Net.WebSockets.WebSocket socket,
-        string wsId,
-        string entityId,
-        SystemMonitorResponse? systemMonitorResponse,
-        CancellationToken cancellationToken)
-    {
-        if (systemMonitorResponse is null)
-            return;
-
-        if (PreviousSensorValuesMap.TryGetValue(SensorType.SwapDetails, out var previousValue) &&
-            Equals(previousValue, systemMonitorResponse.Memory))
-            return;
-
-        PreviousSensorValuesMap[SensorType.SwapDetails] = systemMonitorResponse.Memory;
-
-        await SendMessageAsync(socket,
-            ResponsePayloadHelpers.CreateSensorStateChangedPayload(
-                new SensorStateChangedEventMessageDataAttributes<string>
-                {
-                    State = SensorState.On,
-                    Value = systemMonitorResponse.Memory.GetSwapUsageDetails()
-                },
-                entityId,
-                nameof(SensorType.SwapDetails)),
-            wsId,
-            cancellationToken);
-    }
-
-    private async Task SendCpuUsagePercentLast1MinuteSensor(System.Net.WebSockets.WebSocket socket,
-        string wsId,
-        string entityId,
-        SystemMonitorResponse? systemMonitorResponse,
-        CancellationToken cancellationToken)
-    {
-        if (systemMonitorResponse is null)
-            return;
-
-        if (PreviousSensorValuesMap.TryGetValue(SensorType.CpuUsagePercentLast1Minute, out var previousValue) &&
-            Equals(previousValue, systemMonitorResponse.LoadAvg))
-            return;
-
-        PreviousSensorValuesMap[SensorType.CpuUsagePercentLast1Minute] = systemMonitorResponse.LoadAvg;
-
-        await SendMessageAsync(socket,
-            ResponsePayloadHelpers.CreateSensorStateChangedPayload(
-                new SensorStateChangedEventMessageDataAttributes<string>
-                {
-                    State = SensorState.On,
-                    Value = systemMonitorResponse.LoadAvg.GetLoadLastMinute()
-                },
-                entityId,
-                nameof(SensorType.CpuUsagePercentLast1Minute)),
-            wsId,
-            cancellationToken);
-    }
-
-    private async Task SendCpuUsagePercentLast5MinuteSensor(System.Net.WebSockets.WebSocket socket,
-        string wsId,
-        string entityId,
-        SystemMonitorResponse? systemMonitorResponse,
-        CancellationToken cancellationToken)
-    {
-        if (systemMonitorResponse is null)
-            return;
-
-        if (PreviousSensorValuesMap.TryGetValue(SensorType.CpuUsagePercentLast5Minutes, out var previousValue) &&
-            Equals(previousValue, systemMonitorResponse.LoadAvg))
-            return;
-
-        PreviousSensorValuesMap[SensorType.CpuUsagePercentLast5Minutes] = systemMonitorResponse.LoadAvg;
-
-        await SendMessageAsync(socket,
-            ResponsePayloadHelpers.CreateSensorStateChangedPayload(
-                new SensorStateChangedEventMessageDataAttributes<string>
-                {
-                    State = SensorState.On,
-                    Value = systemMonitorResponse.LoadAvg.GetLoadLastFiveMinutes()
-                },
-                entityId,
-                nameof(SensorType.CpuUsagePercentLast5Minutes)),
-            wsId,
-            cancellationToken);
-    }
-
-    private async Task SendCpuUsagePercentLast15MinuteSensor(System.Net.WebSockets.WebSocket socket,
-        string wsId,
-        string entityId,
-        SystemMonitorResponse? systemMonitorResponse,
-        CancellationToken cancellationToken)
-    {
-        if (systemMonitorResponse is null)
-            return;
-
-        if (PreviousSensorValuesMap.TryGetValue(SensorType.CpuUsagePercentLast15Minutes, out var previousValue) &&
-            Equals(previousValue, systemMonitorResponse.LoadAvg))
-            return;
-
-        PreviousSensorValuesMap[SensorType.CpuUsagePercentLast15Minutes] = systemMonitorResponse.LoadAvg;
-
-        await SendMessageAsync(socket,
-            ResponsePayloadHelpers.CreateSensorStateChangedPayload(
-                new SensorStateChangedEventMessageDataAttributes<string>
-                {
-                    State = SensorState.On,
-                    Value = systemMonitorResponse.LoadAvg.GetLoadLastFifteenMinutes()
-                },
-                entityId,
-                nameof(SensorType.CpuUsagePercentLast15Minutes)),
-            wsId,
-            cancellationToken);
-    }
-
-    private async Task SendFileSystemPercentageSensor(System.Net.WebSockets.WebSocket socket,
-        string wsId,
-        string entityId,
-        SystemMonitorResponse? systemMonitorResponse,
-        CancellationToken cancellationToken)
-    {
-        if (systemMonitorResponse is null)
-            return;
-
-        if (PreviousSensorValuesMap.TryGetValue(SensorType.FileSystemPercentage, out var previousValue) &&
-            Equals(previousValue, systemMonitorResponse.Filesystem))
-            return;
-
-        PreviousSensorValuesMap[SensorType.FileSystemPercentage] = systemMonitorResponse.Filesystem;
-
-        await SendMessageAsync(socket,
-            ResponsePayloadHelpers.CreateSensorStateChangedPayload(
-                new SensorStateChangedEventMessageDataAttributes<double>
-                {
-                    State = SensorState.On,
-                    Value = systemMonitorResponse.Filesystem.UserData.GetPercentage()
-                },
-                entityId,
-                nameof(SensorType.FileSystemPercentage)),
-            wsId,
-            cancellationToken);
-    }
-
-    private async Task SendFileSystemDetailsSensor(System.Net.WebSockets.WebSocket socket,
-        string wsId,
-        string entityId,
-        SystemMonitorResponse? systemMonitorResponse,
-        CancellationToken cancellationToken)
-    {
-        if (systemMonitorResponse is null)
-            return;
-
-        if (PreviousSensorValuesMap.TryGetValue(SensorType.FileSystemDetails, out var previousValue) &&
-            Equals(previousValue, systemMonitorResponse.Filesystem))
-            return;
-
-        PreviousSensorValuesMap[SensorType.FileSystemDetails] = systemMonitorResponse.Filesystem;
-
-        await SendMessageAsync(socket,
-            ResponsePayloadHelpers.CreateSensorStateChangedPayload(
-                new SensorStateChangedEventMessageDataAttributes<string>
-                {
-                    State = SensorState.On,
-                    Value = systemMonitorResponse.Filesystem.UserData.GetDetails()
-                },
-                entityId,
-                nameof(SensorType.FileSystemDetails)),
-            wsId,
-            cancellationToken);
-    }
-
-    private async Task SendBatteryPercentageSensor(System.Net.WebSockets.WebSocket socket,
-        string wsId,
-        string entityId,
-        int? batteryPercentage,
-        CancellationToken cancellationToken)
-    {
-        if (batteryPercentage is null)
-            return;
-
-        if (PreviousSensorValuesMap.TryGetValue(SensorType.BatteryPercentage, out var previousValue) &&
-            Equals(previousValue, batteryPercentage.Value))
-            return;
-
-        PreviousSensorValuesMap[SensorType.BatteryPercentage] = batteryPercentage.Value;
-
-        await SendMessageAsync(socket,
-            ResponsePayloadHelpers.CreateSensorStateChangedPayload(
-                new SensorStateChangedEventMessageDataAttributes<int>
-                {
-                    State = SensorState.On,
-                    Value = batteryPercentage.Value
-                },
-                entityId,
-                nameof(SensorType.BatteryPercentage)),
-            wsId,
-            cancellationToken);
-    }
+    private static byte[] CreateSensorStateChangedPayload(EntityStateChanged state, string suffix) =>
+        state switch
+        {
+            SensorEntityStateChanged<double> doubleState => ResponsePayloadHelpers.CreateSensorStateChangedPayload(doubleState.Attributes, doubleState.EntityId, suffix),
+            SensorEntityStateChanged<string> stringState => ResponsePayloadHelpers.CreateSensorStateChangedPayload(stringState.Attributes, stringState.EntityId, suffix),
+            SensorEntityStateChanged<int> intState => ResponsePayloadHelpers.CreateSensorStateChangedPayload(intState.Attributes, intState.EntityId, suffix),
+            _ => throw new UnreachableException()
+        };
 
     protected override ValueTask<DeviceState> OnGetDeviceStateAsync(GetDeviceStateMsg payload, string wsId, CancellationToken cancellationToken)
     {
@@ -549,6 +338,9 @@ internal sealed class SystemMonitorWebSocketHandler(
         foreach (string msgDataEntityId in payload.MsgData.EntityIds)
             cancellationTokenWrapper.AddSubscribedEntity(msgDataEntityId);
 
+        // New subscribers need the current values, send them all with the next poll
+        SentStates.Clear();
+        RequestPoll();
         return ValueTask.CompletedTask;
     }
 
@@ -567,22 +359,29 @@ internal sealed class SystemMonitorWebSocketHandler(
         return ValueTask.CompletedTask;
     }
 
-    protected override ValueTask<EntityStateChanged[]> OnGetEntityStatesAsync(GetEntityStatesMsg payload, string wsId, CancellationToken cancellationToken)
+    protected override async ValueTask<EntityStateChanged[]> OnGetEntityStatesAsync(GetEntityStatesMsg payload, string wsId, CancellationToken cancellationToken)
     {
-        var states = new EntityStateChanged[SensorTypeExtensions.Length];
-        var types = SensorType.GetValues();
-        for (var index = 0; index < types.Length; index++)
+        try
         {
-            var sensorType = types[index];
-            states[index] = new SensorEntityStateChanged
+            var configuration = await _configurationService.GetConfigurationAsync(cancellationToken);
+            var apiKey = configuration.Entities.FirstOrDefault()?.ApiKey;
+            await using var scope = _serviceProvider.CreateAsyncScope();
+            var systemMonitorClient = scope.ServiceProvider.GetRequiredService<SystemMonitorClient>();
+            var monitorResponse = await systemMonitorClient.GetSystemStatusAsync(wsId, cancellationToken);
+            var batteryLevel = string.IsNullOrEmpty(apiKey) ? null : await systemMonitorClient.GetBatteryLevelAsync(wsId, apiKey, cancellationToken);
+            foreach (var sensorType in SensorType.GetValues())
             {
-                Attributes = [SensorEntityAttribute.State, SensorEntityAttribute.Unit, SensorEntityAttribute.Value],
-                EntityId = EntityId.GetIdentifier(EntityType.Sensor, sensorType.ToStringFast()),
-                EntityType = EntityType.Sensor
-            };
+                if (CreateSensorState(sensorType, EntityId.GetIdentifier(EntityType.Sensor, sensorType.ToStringFast()), monitorResponse, batteryLevel) is { } state)
+                    SentStates[sensorType] = state;
+            }
+        }
+        catch (Exception e) when (e is not OperationCanceledException)
+        {
+            // Last sent states are used instead
+            _logger.FailureDuringEvent(wsId, e);
         }
 
-        return ValueTask.FromResult(states);
+        return [.. SentStates.Values];
     }
 
     protected override MediaPlayerEntityCommandMsgData<MediaPlayerCommandId>? DeserializeMediaPlayerCommandPayload(JsonDocument jsonDocument)
